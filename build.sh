@@ -6,7 +6,7 @@ then
 fi
 echo "Using solc as \"$SOLC\""
 $SOLC --version
-$SOLC -o build --optimize --combined-json abi,bin,bin-runtime --overwrite --base-path . --include-path ./node_modules --include-path ../../../node_modules  src/*/*.sol
+$SOLC -o build --optimize --combined-json abi,bin,bin-runtime --overwrite --base-path . --include-path ./node_modules src/*/*.sol
 if [ $? -eq 0 ]
 then
   echo "- Create index.js and index.d.ts files"
