@@ -1,0 +1,13 @@
+// Note: The config is specific to avoid the following error: node:internal/process/esm_loader:40internalBinding('errors').triggerUncaughtException
+{
+  // "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "target": "ESNext",
+    "moduleResolution": "Node",
+    "esModuleInterop": true,
+    "noEmit": true,
+    "typeRoots": ["node_modules/@types", "../../../node_modules/@types"]
+  },
+  "exclude": ["node_modules", "build"]
+}

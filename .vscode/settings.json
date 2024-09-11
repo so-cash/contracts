@@ -1,0 +1,14 @@
+{
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "mochaExplorer.esmLoader": true,
+  "mochaExplorer.optsFile": "",
+  "mochaExplorer.nodeArgv": [
+    "--experimental-specifier-resolution=node",
+    "--loader=ts-node/esm"
+  ],
+  "mochaExplorer.mochaPath": "node_modules/mocha",
+  "solidity.compileUsingRemoteVersion": "v0.8.17+commit.8df45f5f",
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.formatOnSaveMode": "modificationsIfAvailable"
+}
