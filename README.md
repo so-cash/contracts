@@ -3,7 +3,12 @@
 This documents the version 1.0.0 of the so|cash smart contracts.
 This is not intended to be the final version but a starting point for the development of the so|cash standard.
 
-For the full documentation, please wait a bit... or "read the code" and unit tests.
+For the full documentation, please wait a bit... or "read the code" and unit tests.   
+In particular, we recommend reviewing the [unit testing](https://github.com/so-cash/contracts/tree/main/tests) and the smart contracts [interfaces](https://github.com/so-cash/contracts/tree/main/src/intf) before looking into the implementation.   
+Note the following reading :
+* [preparing smart contracts](https://github.com/so-cash/contracts/blob/1a63fda2f2f272e36100d082726bf08cd3567ceb/tests/so-cash-prepare.ts#L13): `prepareContracts()` function to deploy a minimum setup for testing
+* [Use the contracts from a back office point of view](https://github.com/so-cash/contracts/blob/1a63fda2f2f272e36100d082726bf08cd3567ceb/tests/bo-actions.spec.ts#L9): Several unit testing useful to review
+* [Peform transfers between accounts](https://github.com/so-cash/contracts/blob/1a63fda2f2f272e36100d082726bf08cd3567ceb/tests/interbank-actions.spec.ts#L11): Explore several transfer scenarios
 
 ## Getting Started (for developpers)
 
