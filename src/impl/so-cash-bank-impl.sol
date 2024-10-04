@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.17;
+pragma solidity 0.8.18;
 import "../intf/so-cash-types.sol";
 import "../intf/so-cash-bank.sol";
 import "../intf/so-cash-account.sol";
