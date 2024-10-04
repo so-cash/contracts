@@ -43,7 +43,7 @@ To use this repo and get ready with the smart contracts you will need:
    ```
    where `$SOLC` is the path to the solc compiler.
 
-   You can obviouly use your preferred framework to compile the contracts such as `truffle` or `hardhat`.
+   You can obviouly use your preferred framework to compile the contracts such as `foundry` or `hardhat`.
 
    The `combined.json` file is used by the `@saturn-chain/smart-contract` library that is used in the `index.js` and the unitary tests.
 
@@ -55,7 +55,7 @@ The unit testing are in `tests` folder. You can run the tests with:
 ```sh
 npm run test
 ```
-Or uning VS Code.
+Or using VS Code.
 
 Note the tests are written using the `mocha` framework and the `chai` assertion library in TypeScript.
 
