@@ -1,8 +1,8 @@
 # Do not use version 0.8.20 for the moment because Kerleano and PocrNet do not support the Shanghai fork (EIP-3855)
-SOLC=`(which solc>/dev/null && which solc) || echo /usr/local/bin/solc-v0.8.17`
+SOLC=`(which solc>/dev/null && which solc) || echo /usr/local/bin/solc-v0.8.18`
 if [ ! -x "$SOLC" ]
 then
-  SOLC="docker run -v $PWD:/work -w /work ethereum/solc:0.8.17"
+  SOLC="docker run -v $PWD:/work -w /work ethereum/solc:0.8.18"
 fi
 echo "Using solc as \"$SOLC\""
 $SOLC --version

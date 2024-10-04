@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity 0.8.18;
 
 contract IBANCalculator {
     function calculateIBAN(string memory countryCode, string memory bban) public pure returns (string memory) {

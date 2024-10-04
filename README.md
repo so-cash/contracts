@@ -17,8 +17,8 @@ Any issue or question can be addressed to the so|cash team ussing the issues tab
 ### Prerequisites
 
 To use this repo and get ready with the smart contracts you will need:
-* an EVM compatible blockchain (e.g. Ethereum, Polygon ...). We recommend the PoCR testnet ([Kerleano](https://github.com/ethereum-pocr/kerleano)) where many tests have been implemented.
-* Solidity compiler (solc) version 0.8.17.
+* an EVM compatible blockchain (e.g. Ethereum, Polygon ...). We recommend the Avalanche Fuji testnet where EVM Paris is supported.
+* Solidity compiler (solc) version 0.8.18.
 * Node.js and npm.
 
 ### Installation and Build

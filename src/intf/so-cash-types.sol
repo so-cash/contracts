@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.17;
+pragma solidity 0.8.18;
 
 /** Just a marker type - to give a type to a contract - it should not have function */
 interface ISoCashBank {}

@@ -7,7 +7,7 @@
     "--loader=ts-node/esm"
   ],
   "mochaExplorer.mochaPath": "node_modules/mocha",
-  "solidity.compileUsingRemoteVersion": "v0.8.17+commit.8df45f5f",
+  "solidity.compileUsingRemoteVersion": "v0.8.18+commit.87f61d96",
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true,
   "editor.formatOnSaveMode": "modificationsIfAvailable"
