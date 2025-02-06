@@ -9,7 +9,7 @@ import {
   ganacheProvider,
   getLogs,
   toBuffer,
-} from "../../shared/utils";
+} from "@so-cash/sc-shared/utils";
 import { prepareContracts } from "./so-cash-prepare";
 import inspector from "inspector";
 var debug = inspector.url() !== undefined;

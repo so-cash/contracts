@@ -7,7 +7,7 @@ import {
   cleanStruct,
   cleanStructAndMap,
   ganacheProvider,
-} from "../../shared/utils";
+} from "@so-cash/sc-shared/utils";
 import { prepareContracts } from "./so-cash-prepare";
 import { receipientInfo, createAccount } from "@so-cash/sc-shared";
 

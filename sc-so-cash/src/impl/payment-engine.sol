@@ -358,6 +358,9 @@ library PaymentEngine {
     uint256 amount, 
     TransferId id) external view returns (ExecutionPlan memory) {
     require(SharedFunctions.notNullAccount(sender), "SoC: Cannot transfer from a null account");
+    // ATTENTION: The creditLocalAccount of the plan may be forced to be self, to detect that it is a transfer our an external nostro
+    ISoCashAccount FAKE_ZERO_ACCOUNT = ISoCashAccount(address(self));
+    
     // first check who's the beneficiary's bank
     (BankIdentifier memory target, ISoCashBank onchain, ISoCashAccount toAccount) = self.getTargetBankIdentifier(_routingRef, to);
     // We have a bank identifier (country and codes, a target bank address and possibly an account address)
@@ -367,7 +370,7 @@ library PaymentEngine {
           return ExecutionPlan(id, sender, toAccount, ZERO_ACCOUNT, ZERO_BANK, ZERO_BANK_ACCOUNT(), ZERO_BANK_ACCOUNT());
       } else {
         // we are local but no target account: we burn. Case where the BIC was this bic and no IBAN was provided or the IBAN was not resolved
-        return ExecutionPlan(id, sender, ZERO_ACCOUNT, ZERO_ACCOUNT, ZERO_BANK, ZERO_BANK_ACCOUNT(), ZERO_BANK_ACCOUNT());
+        return ExecutionPlan(id, sender, FAKE_ZERO_ACCOUNT, ZERO_ACCOUNT, ZERO_BANK, ZERO_BANK_ACCOUNT(), ZERO_BANK_ACCOUNT());
       }
     } else {
       return PaymentEngine.planViaCorrespondentLogic(self, _nostros, _routingRef, sender, amount, id, target, onchain);
@@ -460,7 +463,7 @@ library PaymentEngine {
     return an;
   }
 
-  function editBalance(ISoCashBank , AccountData storage ad, uint256 _totalSupply, uint256 _credit, uint256 _debit, uint256 _addLock, uint256 _delLock) external returns (uint256 newSupply) {
+  function editBalance(ISoCashBank , ISoCashAccount account, AccountData storage ad, uint256 _totalSupply, uint256 _credit, uint256 _debit, uint256 _addLock, uint256 _delLock) external returns (uint256 newSupply) {
       // Will proceed to the balance adjustment taking into account overdraft and locked balance
       // No event is generated here, it is just consistency function for the 3 fields of the account data
       // The consistency between the 3 fields is
@@ -563,6 +566,13 @@ library PaymentEngine {
         }
       }
 
+      // check the overdraft limit after the uopdates
+      int limit = SharedFunctions._ioa(account).getAttributeNum(OVERDRAFT_AMOUNT);
+      if (limit > 0) {
+        require(ad.overdraftBalance <= uint256(limit), _addLock>0?"SoC: Overdraft limit would be reached, cannot lock the amount":"SoC: Overdraft limit would be reached, cannot debit account");
+      } else {
+        require(ad.overdraftBalance == 0, _addLock>0?"SoC: Insufficient unlocked funds":"SoC: Insufficient funds");
+      }
       return _totalSupply;
   }
 }

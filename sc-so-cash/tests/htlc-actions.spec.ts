@@ -9,10 +9,11 @@ import {
   ganacheProvider,
   getLogs,
   map,
+  setMochaTimeout,
   traceEventLog,
-} from "../../shared/utils";
+} from "@so-cash/sc-shared/utils";
 import { prepareContracts } from "./so-cash-prepare";
-import { mineBlock, initWeb3Time } from "../../shared/dates";
+import { mineBlock, initWeb3Time } from "@so-cash/sc-shared/dates";
 import {
   createAccount,
   receipientInfo,
@@ -20,7 +21,7 @@ import {
 } from "@so-cash/sc-shared";
 
 describe("Test SoCash HTLC Functions", async function () {
-  this.timeout(10000);
+  setMochaTimeout(this, 20_000);
   const web3 = new Web3(ganacheProvider() as any);
   initWeb3Time(web3);
   let g: Awaited<ReturnType<typeof prepareContracts>> = {} as any;
@@ -41,7 +42,7 @@ describe("Test SoCash HTLC Functions", async function () {
       g.bo2User.send(),
       g.nostroBank1.deployedAt,
       500_000,
-      "Nostro funding",
+      "Nostro funding"
     );
     // allow bank1 to operate its nostro
     await g.nostroBank1.whitelist(g.bo2User.send(), await g.bo1User.account());
@@ -56,19 +57,19 @@ describe("Test SoCash HTLC Functions", async function () {
       htlc1.timeout,
       htlc1.hash,
       htlc1.cancelHash,
-      JSON.stringify({ tradeId: htlc1.tradeId, networkID: "POCR" }),
+      JSON.stringify({ tradeId: htlc1.tradeId, networkID: "POCR" })
     );
     const logs = await getLogs(
       g.nostroBank1.events.HTLCPaymentCreated(g.bo1User.get(), {
         hashlockPaid: htlc1.hash,
-      }),
+      })
     );
     expect(logs.length).to.equal(1);
     htlc1.id = logs[0].returnValues.id;
     console.log("htlcId", htlc1.id);
     // check the the funds are locked
     let balanceLocked = Number.parseInt(
-      await g.nostroBank1.lockedBalance(g.bo1User.call()),
+      await g.nostroBank1.lockedBalance(g.bo1User.call())
     );
     expect(balanceLocked).to.equal(300_000);
 
@@ -77,7 +78,7 @@ describe("Test SoCash HTLC Functions", async function () {
     console.log("htlc event", ev);
 
     const htlc2 = cleanStruct(
-      await g.nostroBank1.getHTLCPayment(g.bo2User.call(), ev.id),
+      await g.nostroBank1.getHTLCPayment(g.bo2User.call(), ev.id)
     );
     htlc2.id = ev.id;
     // making a successful payment in DL3S or other scheme reveals the secret
@@ -89,7 +90,7 @@ describe("Test SoCash HTLC Functions", async function () {
       g.nostroBank1.deployedAt,
       receipientInfo(g.nostroBank1.deployedAt),
       Number.parseInt(htlc2.amount),
-      "Payment",
+      "Payment"
     );
     console.log("Plan", cleanStruct(plan));
 
@@ -99,18 +100,18 @@ describe("Test SoCash HTLC Functions", async function () {
       htlc2.id,
       receipientInfo(g.nostroBank1.deployedAt),
       htlc2.secret,
-      "Redemption",
+      "Redemption"
     );
     // And the funds are now unlocked
     balanceLocked = Number.parseInt(
-      await g.bank2.lockedBalanceOf(g.bo2User.call(), g.nostroBank1.deployedAt),
+      await g.bank2.lockedBalanceOf(g.bo2User.call(), g.nostroBank1.deployedAt)
     );
     expect(balanceLocked).to.equal(0);
     // check the event log
     const logs2 = await getLogs(
       g.nostroBank1.events.HTLCPaymentRemoved(g.bo2User.get(), {
         id: htlc2.id,
-      }),
+      })
     );
     expect(logs2.length).to.equal(1);
     expect(logs2[0].returnValues.cancelled).to.be.false;
@@ -119,7 +120,7 @@ describe("Test SoCash HTLC Functions", async function () {
       g.bo2User.send(),
       g.nostroBank1.deployedAt,
       Number.parseInt(htlc2.amount),
-      "Clearing",
+      "Clearing"
     );
   });
 
@@ -133,7 +134,7 @@ describe("Test SoCash HTLC Functions", async function () {
       g.bo2User.send(),
       g.nostroBank1.deployedAt,
       500_000,
-      "Nostro funding",
+      "Nostro funding"
     );
     // allow bank1 to operate its nostro
     await g.nostroBank1.whitelist(g.bo2User.send(), await g.bo1User.account());
@@ -148,26 +149,26 @@ describe("Test SoCash HTLC Functions", async function () {
       htlc1.timeout,
       htlc1.hash,
       htlc1.cancelHash,
-      JSON.stringify({ tradeId: htlc1.tradeId, networkID: "POCR" }),
+      JSON.stringify({ tradeId: htlc1.tradeId, networkID: "POCR" })
     );
     const logs = await getLogs(
       g.nostroBank1.events.HTLCPaymentCreated(g.bo1User.get(), {
         hashlockPaid: htlc1.hash,
-      }),
+      })
     );
     expect(logs.length).to.equal(1);
     htlc1.id = logs[0].returnValues.id;
     console.log("htlcId", htlc1.id);
     // check the the funds are locked
     const balanceLocked = Number.parseInt(
-      await g.nostroBank1.lockedBalance(g.bo1User.call()),
+      await g.nostroBank1.lockedBalance(g.bo1User.call())
     );
     expect(balanceLocked).to.equal(300_000);
 
     // Bank2 has received the htlc id via the event and can make the payment
     const ev = cleanEvent(logs[0]).returnValues;
     const htlc2 = cleanStruct(
-      await g.nostroBank1.getHTLCPayment(g.bo2User.call(), ev.id),
+      await g.nostroBank1.getHTLCPayment(g.bo2User.call(), ev.id)
     );
     htlc2.id = ev.id;
     // making a successful payment in DL3S or other scheme reveals the secret
@@ -179,19 +180,19 @@ describe("Test SoCash HTLC Functions", async function () {
       htlc2.id,
       receipientInfo(transitAccount.deployedAt),
       htlc2.secret,
-      "Redemption",
+      "Redemption"
     );
     // And the funds are now in the transit account that can be cleared by Bank2
     const balance = await g.bank2.balanceOf(
       g.bo2User.call(),
-      transitAccount.deployedAt,
+      transitAccount.deployedAt
     );
     expect(balance).to.equal(htlc2.amount);
     // check the event log
     const logs2 = await getLogs(
       g.nostroBank1.events.HTLCPaymentRemoved(g.bo2User.get(), {
         id: htlc2.id,
-      }),
+      })
     );
     expect(logs2.length).to.equal(1);
     expect(logs2[0].returnValues.cancelled).to.be.false;
@@ -200,7 +201,7 @@ describe("Test SoCash HTLC Functions", async function () {
       g.bo2User.send(),
       transitAccount.deployedAt,
       Number.parseInt(htlc2.amount),
-      "Clearing",
+      "Clearing"
     );
   });
 
@@ -212,7 +213,7 @@ describe("Test SoCash HTLC Functions", async function () {
       g.bo2User.send(),
       g.nostroBank1.deployedAt,
       500_000,
-      "Nostro funding",
+      "Nostro funding"
     );
     // allow bank1 to operate its nostro
     await g.nostroBank1.whitelist(g.bo2User.send(), await g.bo1User.account());
@@ -227,26 +228,26 @@ describe("Test SoCash HTLC Functions", async function () {
       htlc1.timeout,
       htlc1.hash,
       htlc1.cancelHash,
-      JSON.stringify({ tradeId: htlc1.tradeId, networkID: "POCR" }),
+      JSON.stringify({ tradeId: htlc1.tradeId, networkID: "POCR" })
     );
     const logs = await getLogs(
       g.nostroBank1.events.HTLCPaymentCreated(g.bo1User.get(), {
         hashlockPaid: htlc1.hash,
-      }),
+      })
     );
     expect(logs.length).to.equal(1);
     htlc1.id = logs[0].returnValues.id;
     console.log("htlcId", htlc1.id);
     // check the the funds are locked
     const balanceLocked = Number.parseInt(
-      await g.nostroBank1.lockedBalance(g.bo1User.call()),
+      await g.nostroBank1.lockedBalance(g.bo1User.call())
     );
     expect(balanceLocked).to.equal(300_000);
 
     // Bank2 has received the htlc id via the event and can make the payment
     const ev = cleanEvent(logs[0]).returnValues;
     const htlc2 = cleanStruct(
-      await g.nostroBank1.getHTLCPayment(g.bo2User.call(), ev.id),
+      await g.nostroBank1.getHTLCPayment(g.bo2User.call(), ev.id)
     );
     htlc2.id = ev.id;
     // making a successful payment in DL3S or other scheme reveals the secret
@@ -259,18 +260,18 @@ describe("Test SoCash HTLC Functions", async function () {
       htlc2.id,
       receipientInfo(undefined, bic, ""),
       htlc2.secret,
-      "Redemption",
+      "Redemption"
     );
     // And the funds are now in the transit account that can be cleared by Bank2
     const balance = Number.parseInt(
-      await g.bank2.balanceOf(g.bo2User.call(), g.nostroBank1.deployedAt),
+      await g.bank2.balanceOf(g.bo2User.call(), g.nostroBank1.deployedAt)
     );
     expect(balance).to.equal(500_000 - htlc2.amount);
     // check the event log
     const logs2 = await getLogs(
       g.nostroBank1.events.HTLCPaymentRemoved(g.bo2User.get(), {
         id: htlc2.id,
-      }),
+      })
     );
     expect(logs2.length).to.equal(1);
     expect(logs2[0].returnValues.cancelled).to.be.false;
@@ -282,7 +283,7 @@ describe("Test SoCash HTLC Functions", async function () {
       g.bo2User.send(),
       g.nostroBank1.deployedAt,
       500_000,
-      "Nostro funding",
+      "Nostro funding"
     );
     // allow bank1 to operate its nostro
     await g.nostroBank1.whitelist(g.bo2User.send(), await g.bo1User.account());
@@ -296,17 +297,17 @@ describe("Test SoCash HTLC Functions", async function () {
       htlc1.timeout,
       htlc1.hash,
       htlc1.cancelHash,
-      JSON.stringify({ tradeId: htlc1.tradeId, networkID: "POCR" }),
+      JSON.stringify({ tradeId: htlc1.tradeId, networkID: "POCR" })
     );
     const logs = await getLogs(
       g.nostroBank1.events.HTLCPaymentCreated(g.bo1User.get(), {
         hashlockPaid: htlc1.hash,
-      }),
+      })
     );
     htlc1.id = logs[0].returnValues.id;
     // check the the funds are locked
     let balanceLocked = Number.parseInt(
-      await g.nostroBank1.lockedBalance(g.bo1User.call()),
+      await g.nostroBank1.lockedBalance(g.bo1User.call())
     );
     expect(balanceLocked).to.equal(300_000);
 
@@ -314,17 +315,17 @@ describe("Test SoCash HTLC Functions", async function () {
     await g.nostroBank1.unlockFunds(
       g.bo1User.send(),
       htlc1.id,
-      htlc1.cancelSecret,
+      htlc1.cancelSecret
     );
     balanceLocked = Number.parseInt(
-      await g.nostroBank1.lockedBalance(g.bo1User.call()),
+      await g.nostroBank1.lockedBalance(g.bo1User.call())
     );
     expect(balanceLocked).to.equal(0);
     // check the event log
     const logs2 = await getLogs(
       g.nostroBank1.events.HTLCPaymentRemoved(g.bo2User.get(), {
         id: htlc1.id,
-      }),
+      })
     );
     expect(logs2.length).to.equal(1);
     expect(logs2[0].returnValues.cancelled).to.be.true;
@@ -346,7 +347,7 @@ describe("Test SoCash HTLC Functions", async function () {
       g.bo2User.send(),
       account2.deployedAt,
       500_000,
-      "Client 2 funding",
+      "Client 2 funding"
     );
     await account2.lockFunds(
       g.user2.send(),
@@ -355,12 +356,12 @@ describe("Test SoCash HTLC Functions", async function () {
       timeout,
       hash,
       "0x0",
-      JSON.stringify({ tradeId: "DVP1", networkID: "POCR" }),
+      JSON.stringify({ tradeId: "DVP1", networkID: "POCR" })
     );
 
     // Client 1 receives the event and checks the lock
     let logs = await getLogs(
-      account2.events.HTLCPaymentCreated(g.user1.get(), { hashlockPaid: hash }),
+      account2.events.HTLCPaymentCreated(g.user1.get(), { hashlockPaid: hash })
     );
     let ev = cleanEvent(logs[0]).returnValues;
     console.log("DvP Cash Lock", ev);
@@ -370,12 +371,12 @@ describe("Test SoCash HTLC Functions", async function () {
       ev.id,
       receipientInfo(account1.deployedAt),
       secret,
-      "Pay DvP",
+      "Pay DvP"
     );
 
     // Client 2 receives the secret and cat take the asset with it
     logs = await getLogs(
-      account2.events.HTLCPaymentRemoved(g.user2.get(), { id: ev.id }),
+      account2.events.HTLCPaymentRemoved(g.user2.get(), { id: ev.id })
     );
     ev = cleanEvent(logs[0]).returnValues;
     console.log("DvP Cash Lock released secret", ev.usingSecret);
@@ -391,22 +392,22 @@ describe("Test SoCash HTLC Functions", async function () {
     const account1EUR = await createAccount(
       "Account1EUR",
       eur.bank1,
-      eur.bo1User,
+      eur.bo1User
     );
     const account1USD = await createAccount(
       "Account1USD",
       usd.bank1,
-      usd.bo1User,
+      usd.bo1User
     );
     const account2EUR = await createAccount(
       "Account2EUR",
       eur.bank2,
-      eur.bo2User,
+      eur.bo2User
     );
     const account2USD = await createAccount(
       "Account2USD",
       usd.bank2,
-      usd.bo2User,
+      usd.bo2User
     );
     // allow the users
     await account1EUR.whitelist(eur.bo1User.send(), await g.user1.account());
@@ -419,13 +420,13 @@ describe("Test SoCash HTLC Functions", async function () {
       eur.bo1User.send(),
       account1EUR.deployedAt,
       500_000,
-      "Client 1 EUR funding",
+      "Client 1 EUR funding"
     );
     await usd.bank2.credit(
       usd.bo2User.send(),
       account2USD.deployedAt,
       500_000,
-      "Client 2 USD funding",
+      "Client 2 USD funding"
     );
 
     // Both parties have agreed on a price and a tradeId
@@ -440,15 +441,15 @@ describe("Test SoCash HTLC Functions", async function () {
       eurHTLC.timeout,
       eurHTLC.hash,
       eurHTLC.cancelHash,
-      JSON.stringify({ tradeId, price: 1.2 }),
+      JSON.stringify({ tradeId, price: 1.2 })
     );
 
     // Client 2 receives the event and prepare its side of the PvP
     let logs = await getLogs(
-      g.accountContract.events.HTLCPaymentCreated(g.user2.get(), {}),
+      g.accountContract.events.HTLCPaymentCreated(g.user2.get(), {})
     );
     logs = logs.filter(
-      (l) => JSON.parse(l.returnValues.htlc.opaque).tradeId === tradeId,
+      (l) => JSON.parse(l.returnValues.htlc.opaque).tradeId === tradeId
     );
     if (logs.length === 0) throw new Error("No event found for the EUR PvP");
     let htlcEUR = cleanEvent(logs[0]).returnValues;
@@ -466,14 +467,14 @@ describe("Test SoCash HTLC Functions", async function () {
       deadline,
       htlcEUR.htlc.hashlockPaid,
       htlcEUR.htlc.hashlockCancel,
-      htlcEUR.htlc.opaque,
+      htlcEUR.htlc.opaque
     );
 
     // Client 1 receives the event and checks the lock
     logs = await getLogs(
       account2USD.events.HTLCPaymentCreated(g.user1.get(), {
         hashlockPaid: eurHTLC.hash,
-      }),
+      })
     );
     if (logs.length === 0) throw new Error("No event found for the USD PvP");
     const htlcUSD = cleanEvent(logs[0]).returnValues;
@@ -483,14 +484,14 @@ describe("Test SoCash HTLC Functions", async function () {
       htlcUSD.id,
       receipientInfo(account1USD.deployedAt),
       eurHTLC.secret,
-      "Pay PvP",
+      "Pay PvP"
     );
 
     // Client 2 receives the secret and can now take the EUR
     logs = await getLogs(
       g.accountContract.events.HTLCPaymentRemoved(g.user2.get(), {
         id: htlcUSD.id,
-      }),
+      })
     );
     const ev3 = cleanEvent(logs[0]).returnValues;
     console.log("PvP Cash Lock released secret", ev3.usingSecret);
@@ -500,7 +501,7 @@ describe("Test SoCash HTLC Functions", async function () {
       htlcEUR.id,
       receipientInfo(account2EUR.deployedAt),
       ev3.usingSecret,
-      "Pay PvP",
+      "Pay PvP"
     );
   });
 
@@ -510,7 +511,7 @@ describe("Test SoCash HTLC Functions", async function () {
       g.bo2User.send(),
       g.nostroBank1.deployedAt,
       500_000,
-      "Nostro funding",
+      "Nostro funding"
     );
     // allow bank1 to operate its nostro
     await g.nostroBank1.whitelist(g.bo2User.send(), await g.bo1User.account());
@@ -524,12 +525,12 @@ describe("Test SoCash HTLC Functions", async function () {
       htlc1.timeout,
       htlc1.hash,
       htlc1.cancelHash,
-      JSON.stringify({ tradeId: htlc1.tradeId, networkID: "POCR" }),
+      JSON.stringify({ tradeId: htlc1.tradeId, networkID: "POCR" })
     );
     const logs = await getLogs(
       g.nostroBank1.events.HTLCPaymentCreated(g.bo1User.get(), {
         hashlockPaid: htlc1.hash,
-      }),
+      })
     );
     htlc1.id = logs[0].returnValues.id;
 
@@ -537,14 +538,14 @@ describe("Test SoCash HTLC Functions", async function () {
     // Bank1 can cancel the lock
     await g.nostroBank1.unlockFunds(g.bo1User.send(), htlc1.id, "");
     const balanceLocked = Number.parseInt(
-      await g.nostroBank1.lockedBalance(g.bo1User.call()),
+      await g.nostroBank1.lockedBalance(g.bo1User.call())
     );
     expect(balanceLocked).to.equal(0);
     // check the event log
     const logs2 = await getLogs(
       g.nostroBank1.events.HTLCPaymentRemoved(g.bo2User.get(), {
         id: htlc1.id,
-      }),
+      })
     );
     expect(logs2.length).to.equal(1);
     expect(logs2[0].returnValues.cancelled).to.be.true;
@@ -556,7 +557,7 @@ describe("Test SoCash HTLC Functions", async function () {
       g.bo2User.send(),
       g.nostroBank1.deployedAt,
       500_000,
-      "Nostro funding",
+      "Nostro funding"
     );
     // allow bank1 to operate its nostro
     await g.nostroBank1.whitelist(g.bo2User.send(), await g.bo1User.account());
@@ -570,12 +571,12 @@ describe("Test SoCash HTLC Functions", async function () {
       htlc1.timeout,
       htlc1.hash,
       htlc1.cancelHash,
-      JSON.stringify({ tradeId: htlc1.tradeId, networkID: "POCR" }),
+      JSON.stringify({ tradeId: htlc1.tradeId, networkID: "POCR" })
     );
     const logs = await getLogs(
       g.nostroBank1.events.HTLCPaymentCreated(g.bo1User.get(), {
         hashlockPaid: htlc1.hash,
-      }),
+      })
     );
     htlc1.id = logs[0].returnValues.id;
 
@@ -585,7 +586,7 @@ describe("Test SoCash HTLC Functions", async function () {
       htlc1.id,
       receipientInfo(g.nostroBank2.deployedAt),
       "a false secret",
-      "Redemption",
+      "Redemption"
     );
     await expect(p).to.be.rejectedWith("secret mismatch");
   });

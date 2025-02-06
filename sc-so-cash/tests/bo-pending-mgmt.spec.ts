@@ -10,7 +10,7 @@ import {
   getLogs,
   map,
   traceEventLog,
-} from "../../shared/utils";
+} from "@so-cash/sc-shared/utils";
 import { prepareContracts } from "./so-cash-prepare";
 import { createAccount, receipientInfo } from "@so-cash/sc-shared";
 

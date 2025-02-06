@@ -21,7 +21,7 @@ import {
   cleanStruct,
   ganacheProvider,
   traceEventLog,
-} from "../../shared/utils";
+} from "@so-cash/sc-shared/utils";
 
 describe("Test the IBAN calculations", function () {
   this.timeout(10000);

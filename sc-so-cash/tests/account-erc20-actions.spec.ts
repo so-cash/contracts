@@ -3,7 +3,7 @@ import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 
 import Web3 from "web3";
-import { ganacheProvider, getLogs } from "../../shared/utils";
+import { ganacheProvider, getLogs } from "@so-cash/sc-shared/utils";
 import { prepareContracts } from "./so-cash-prepare";
 import { createAccount, getNewWallet } from "@so-cash/sc-shared";
 

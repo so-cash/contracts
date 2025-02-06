@@ -499,11 +499,15 @@ contract SoCashBank is ISoCashBank, ISoCashBankBackOffice, ISoCashBankExternal, 
     bool success = true;
     int8 controlConsistency = 0; // A liability increase does +1, a liability decrease does -1, we should have zero at the end
 
-    // ATTENTION, the plan.debitLocalAccount can be this address when interbank (to solve a stack depth issue)
+    // ATTENTION, the plan.debitLocalAccount/creditLocalAccont can be this address when interbank (to solve a stack depth issue)
     // Fix this and set the controlConsistency accordingly
     if (address(plan.debitLocalAccount) == address(this)) {
       plan.debitLocalAccount = ZERO_ACCOUNT;
       controlConsistency--; // because it means that we have been credited in a nostro outside
+    }
+    if (address(plan.creditLocalAccount) == address(this)) {
+      plan.creditLocalAccount = ZERO_ACCOUNT;
+      controlConsistency++; // because it means that we have been debited in a nostro outside
     }
 
     // first process the local accounts (we do not check that the account are locals again)
@@ -767,8 +771,8 @@ contract SoCashBank is ISoCashBank, ISoCashBankBackOffice, ISoCashBankExternal, 
       _setTransferStatus(id, TransferStatus.PENDING);
       return false;
     }
-    if (SharedFunctions.notNullAccount(sender)) _totalSupply = this.editBalance(_accounts[sender], _totalSupply, 0, amount, 0, 0);
-    if (SharedFunctions.notNullAccount(recipient)) _totalSupply = this.editBalance(_accounts[recipient], _totalSupply, amount, 0, 0, 0);
+    if (SharedFunctions.notNullAccount(sender)) _totalSupply = this.editBalance(sender, _accounts[sender], _totalSupply, 0, amount, 0, 0);
+    if (SharedFunctions.notNullAccount(recipient)) _totalSupply = this.editBalance(recipient, _accounts[recipient], _totalSupply, amount, 0, 0, 0);
     emit Transfer(address(sender), address(recipient), amount);
     emit TransferEx(sender, recipient, amount, id);
     _setTransferStatus(id, TransferStatus.STP);
@@ -780,7 +784,7 @@ contract SoCashBank is ISoCashBank, ISoCashBankBackOffice, ISoCashBankExternal, 
     require(SharedFunctions.notNullAccount(account), "SoC: Cannot lock funds of a null account");
     require(_accounts[account].registered, "SoC: Cannot lock funds of an unregistered account");
     
-    _totalSupply = this.editBalance(_accounts[account], _totalSupply, 0, 0, amount, 0);
+    _totalSupply = this.editBalance(account, _accounts[account], _totalSupply, 0, 0, amount, 0);
     return true;
   }
 
@@ -788,7 +792,7 @@ contract SoCashBank is ISoCashBank, ISoCashBankBackOffice, ISoCashBankExternal, 
     require(SharedFunctions.notNullAccount(account), "SoC: Cannot unlock funds of a null account");
     require(_accounts[account].registered, "SoC: Cannot unlock funds of an unregistered account");
     
-    _totalSupply = this.editBalance(_accounts[account], _totalSupply, 0, 0, 0, amount);
+    _totalSupply = this.editBalance(account, _accounts[account], _totalSupply, 0, 0, 0, amount);
     return true;
   }
 

@@ -7,7 +7,7 @@ import {
   cleanStruct,
   ganacheProvider,
   setMochaTimeout,
-} from "../../shared/utils";
+} from "@so-cash/sc-shared/utils";
 import { prepareContracts } from "./so-cash-prepare";
 
 describe("Test SoCash Bank External Functions", async function () {
