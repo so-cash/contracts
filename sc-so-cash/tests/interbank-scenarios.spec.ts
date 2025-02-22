@@ -16,6 +16,7 @@ import {
   initContractCompilation,
   registerERC20Nostro,
   setCorrespondent,
+  simulateEndToEndTransfer,
   unsubscribeAll,
 } from "./so-cash-prepare";
 import {
@@ -204,6 +205,17 @@ describe("SoCash Interbank scenarios", async function () {
       "Funding",
     );
 
+    const simulatedPlan = await simulateEndToEndTransfer(
+      bank1,
+      client1,
+      receipientInfo(client2.deployedAt),
+      0,
+    );
+    console.log(
+      "SIMULATED PLAN",
+      JSON.stringify(cleanStructAndMap(simulatedPlan), null, 2),
+    );
+
     // Transfer from client1 to client2
     await client1.transferEx(
       bank1.boUser.send(),
@@ -359,6 +371,18 @@ describe("SoCash Interbank scenarios", async function () {
         nostro1.deployedAt,
       ),
     );
+
+    const simulatedTransfer = await simulateEndToEndTransfer(
+      bank1,
+      client1,
+      receipientInfo(client2.deployedAt),
+      500_00,
+    );
+    console.log(
+      "SIMULATED PLAN:",
+      JSON.stringify(cleanStructAndMap(simulatedTransfer), null, 2),
+    );
+
     // Transfer from client1 to client2
     await client1.transferEx(
       bank1.boUser.send(),
@@ -532,6 +556,17 @@ describe("SoCash Interbank scenarios", async function () {
     //   bankB.id
     // );
     // console.log("Route", JSON.stringify(route, null, 2));
+
+    const simulatedPlan = await simulateEndToEndTransfer(
+      bankA,
+      clientA,
+      receipientInfo(clientB.deployedAt),
+      500_00,
+    );
+    console.log(
+      "SIMULATED PLAN",
+      JSON.stringify(cleanStructAndMap(simulatedPlan), null, 2),
+    );
 
     // Transfer from ClientA to ClientB
     const tx = await clientA.transferEx(
@@ -1005,7 +1040,7 @@ describe("SoCash Interbank scenarios", async function () {
       "Transfer",
     );
     await expect(p).to.be.rejectedWith(
-      /No SSI account found for the paying bank/,
+      /No matching SSI account found for the paying bank/,
     );
   });
 
@@ -1107,6 +1142,17 @@ describe("SoCash Interbank scenarios", async function () {
     // get the IBAN of the clientA account
     const iban = await clientA.iban(bankA.boUser.call());
     console.log("IBAN", iban);
+
+    const simulatedTransfer = await simulateEndToEndTransfer(
+      bank2,
+      client2,
+      receipientInfo(undefined, undefined, iban),
+      300_00,
+    );
+    console.log(
+      "SIMULATED TRANSFER:",
+      JSON.stringify(cleanStructAndMap(simulatedTransfer), null, 2),
+    );
 
     // make a transfer from client2 to clientA using the IBAN
     await client2.transferEx(

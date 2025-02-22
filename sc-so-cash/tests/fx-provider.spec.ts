@@ -62,6 +62,21 @@ describe("Test SoCash FX Provider", async function () {
       wallet.address,
     );
 
+    // set the fx rate source
+    await instance.setFXRateSource(
+      owner.send(),
+      toBuffer("xxx"),
+      toBuffer("xxx"),
+      "https://the.server.com/api/fx/rate",
+    );
+
+    const source = await instance.getFXRateSource(
+      owner.call(),
+      toBuffer("EUR"),
+      toBuffer("USD"),
+    );
+    console.log("FX Rate Source calculated as ", source);
+
     expect(instance).to.be.not.null;
   });
 

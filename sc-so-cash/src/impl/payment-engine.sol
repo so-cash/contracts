@@ -306,29 +306,41 @@ library PaymentEngine {
         // we can debit the client and credit the beneficiary
         return ExecutionPlan(id, sender, ZERO_ACCOUNT, ISoCashAccount(nostro.account), ZERO_BANK, ZERO_BANK_ACCOUNT(), ZERO_BANK_ACCOUNT());
       }
+      // else we do not have liquidity in this account so we need to find another source of liqudity in our nostros
     }
     // then we prioritize the ssi of the correspondent bank
     // Test if the ssi account is with us
     if (ssi.bank == address(self)) {
-      // the ssi account is with us, we can credit it as new liability
+      // the ssi account is with us, we can credit it as new liability, so the only liquidity limit is the regulatory LCR.
+      // We may need a size limit here to avoid too big transfers
       return ExecutionPlan(id, sender, ISoCashAccount(ssi.account), ZERO_ACCOUNT, onchainTarget, ZERO_BANK_ACCOUNT(), ZERO_BANK_ACCOUNT());
-    } else if (_nostros[ssi.bank].model == BankModel.ERC20) {
-      // check that we have a nostro in the same token
-      // we have a nostro with the same bank as the ssi account
-      // we can use it to credit the correspondent bank
-      nostro = _nostros[ssi.bank];
-      return ExecutionPlan(id, sender, ZERO_ACCOUNT, ZERO_ACCOUNT, onchainTarget, BankAccount(nostro.model, nostro.bank, nostro.account), ssi);
+    } else if (ssi.model == BankModel.ERC20) {
+      // They have an SSI that is an ERC20, check that we have a nostro in the same token
+      // if so, we can use it to credit the correspondent bank
+      NostroAccount memory nostroERC = _nostros[ssi.bank];
+      // We should check that the nostro exists or that the token has balance with the address of this smart contract
+      // If we do not have liquidity on this token, then we should fail because we won't be able to transfer 
+      IERC20 token = IERC20(ssi.bank);
+      // If no nostro is defined, use self as the address
+      if (nostroERC.model == BankModel.UNDEFINED) nostroERC = NostroAccount(BankModel.ERC20, ssi.bank, address(self), 0, 0, 0);
+      // Get the current available balance in the token
+      nostroERC.lastBalance = int256(token.balanceOf(nostroERC.account));
+      require(uint256(nostroERC.lastBalance) >= amount, "SoC PE: No liquidity available in the ERC20 token");
+      return ExecutionPlan(id, sender, ZERO_ACCOUNT, ZERO_ACCOUNT, onchainTarget, BankAccount(nostroERC.model, nostroERC.bank, nostroERC.account), ssi);
     } else if (ssi.model == BankModel.SO_CASH) {
-      // We have an SSI acount we need to pay to, lets pay from our own ssi
+      // They have an SSI acount we need to pay to, lets pay from our own ssi for this currency
       bytes3 _ccy = bytes3(bytes(SharedFunctions._ierc(self).symbol()));
       BankIdentifier memory selfId = SharedFunctions._ibe(self).bankIdentifier();
       ISoCashCountryReferential country = _routingRef.getCountry(selfId.country);
       BankAccount memory selfSSI = country.getSSI(selfId.codes, _ccy);
       if (selfSSI.model == BankModel.SO_CASH) {
-        // we have an SSI account with the same bank as the SSI account we need to pay to
+        // we have an SSI account for the currency from which we can pay from
+        // check we have enough balance, get the balance first then check
+        int256 balance = ISoCashBankExternal(selfSSI.bank).fullBalanceOf(ISoCashAccount(selfSSI.account));
+        require(uint256(balance) >= amount, "SoC PE: No liquidity available in the SSI");
         return ExecutionPlan(id, sender, ZERO_ACCOUNT, ZERO_ACCOUNT, onchainTarget, selfSSI, ssi);
       } else {
-        require(false, "SoC PE: No SSI account found for the paying bank");
+        require(false, "SoC PE: No matching SSI account found for the paying bank");
       }
       // // the loro account is not with us, we need to see if we have a nostro with that same bank
       // if (_nostros[ssi.bank].model != BankModel.UNDEFINED) {

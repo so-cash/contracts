@@ -90,7 +90,6 @@ describe("Test SoCash HTLC Functions", async function () {
       g.nostroBank1.deployedAt,
       receipientInfo(g.nostroBank1.deployedAt),
       Number.parseInt(htlc2.amount),
-      "Payment",
     );
     console.log("Plan", cleanStruct(plan));
 

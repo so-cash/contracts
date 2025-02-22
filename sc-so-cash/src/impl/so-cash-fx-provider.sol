@@ -13,9 +13,10 @@ import "../utilities/shared-lib.sol";
 
 
 contract SoCashFXProvider is ISoCashFXProvider, WhitelistedSenders {
-  string public constant version = "2.0.0";
+  string public constant version = "1.0.0";
   //#region STORAGE VARIABLES
   ISoCashGlobalReferential private _routingRef; // set by the methof setRouterReferential
+  string private _fxRateSourceUrl;
  
   using PaymentEngine for SoCashFXProvider;
   // using IBANCalculator for SoCashBank;
@@ -28,6 +29,7 @@ contract SoCashFXProvider is ISoCashFXProvider, WhitelistedSenders {
   constructor(ISoCashGlobalReferential routingRef, address rateSigner) {
     _routingRef = routingRef;
     _rateSignerAddress = rateSigner;
+    _fxRateSourceUrl = "unset";
   }
 
   function setCurrencyAccount(CCY ccy, ISoCashAccount account) public onlyWhitelisted {
@@ -35,11 +37,11 @@ contract SoCashFXProvider is ISoCashFXProvider, WhitelistedSenders {
     emit CurrencyAccountSet(ccy, account);
   }
 
-  function setFXRateSource(CCY base, CCY quote, string calldata source) public onlyWhitelisted {
-
+  function setFXRateSource(CCY , CCY , string calldata source) public onlyWhitelisted {
+    _fxRateSourceUrl = source;
   }
-  function getFXRateSource(CCY /*base*/, CCY /*quote*/) public pure returns (string memory) {
-    return "not implemented";
+  function getFXRateSource(CCY base, CCY quote) public view returns (string memory) {
+    return string(abi.encodePacked(_fxRateSourceUrl,"?base=",base,"&quote=",quote));
   }
 
   function setRateSigner(address signer) public onlyWhitelisted {

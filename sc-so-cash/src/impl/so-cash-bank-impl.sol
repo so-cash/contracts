@@ -328,7 +328,10 @@ contract SoCashBank is ISoCashBank, ISoCashBankBackOffice, ISoCashBankExternal, 
   function registerNostroAccount(BankAccount calldata nostro) public onlyWhitelisted returns (bool) {
     require(nostro.model != BankModel.UNDEFINED, "SoC: Cannot register an undefined nostro model");
     require(address(nostro.bank) != address(0), "SoC: Cannot register a null bank nostro");
-    require(address(nostro.account) != address(0), "SoC: Cannot register a null account nostro"); 
+    require(address(nostro.account) != address(0), "SoC: Cannot register a null account nostro");
+    if (nostro.model == BankModel.SO_CASH) {
+      require(ISoCashOwnedAccount(nostro.account).bank() == ISoCashBank(nostro.bank), "SoC: Inconsistent bank and account");
+    }
     int256 balance = PaymentEngine.getNostroBalanceByModel(nostro.model, address(nostro.bank), address(nostro.account));
 
     _nostros[nostro.bank] = NostroAccount(nostro.model, address(nostro.bank), address(nostro.account), balance, 0, 0);
@@ -383,10 +386,10 @@ contract SoCashBank is ISoCashBank, ISoCashBankBackOffice, ISoCashBankExternal, 
     return _transferLogic(from, to, amount, id);
   }
 
-  function simulateTransfer(ISoCashAccount from, RecipentInfo calldata to, uint256 amount, string calldata details) public onlyWhitelisted returns (ExecutionPlan memory) {
-    TransferId id = _createTransferInfo(from, to, amount, details);
-    return this.transferExecutionPlan(_nostros, _routingRef, from, to, amount, id);
-  }
+  // function simulateTransfer(ISoCashAccount from, RecipentInfo calldata to, uint256 amount, string calldata details) public onlyWhitelisted returns (ExecutionPlan memory) {
+  //   TransferId id = _createTransferInfo(from, to, amount, details);
+  //   return this.transferExecutionPlan(_nostros, _routingRef, from, to, amount, id);
+  // }
 
 
   function requestNetting(ISoCashBank cBank, ISoCashAccount loro, uint256 amount) public returns (bool) {
@@ -464,15 +467,18 @@ contract SoCashBank is ISoCashBank, ISoCashBankBackOffice, ISoCashBankExternal, 
     return false;
   }
 
-  //#region INTERNAL FUNCTIONS
   function simulateTransfer(ISoCashAccount fromAccount, RecipentInfo memory to, uint256 amount) public view returns (ExecutionPlan memory) {
     TransferId id = TransferId.wrap(0);
     return this.transferExecutionPlan(_nostros, _routingRef, fromAccount, to, amount, id);
   }
-  function simulateInterbankTransfer(ISoCashBank fromBank, RecipentInfo memory to, uint256 amount) public view returns (ExecutionPlan memory) {
+  function simulateInterbankTransfer(ISoCashBank fromBank, RecipentInfo memory to, uint256 amount) public view returns (ExecutionPlan memory plan) {
     TransferId id = TransferId.wrap(0);
-    return this.interbankExecutionPlan(_nostros, _routingRef, fromBank, to, amount, id);
+    plan = this.interbankExecutionPlan(_nostros, _routingRef, fromBank, to, amount, id);
+    plan.debitLocalAccount = ZERO_ACCOUNT;
+    return plan;
   }
+
+  //#region INTERNAL FUNCTIONS
 
   function _transferLogic(ISoCashAccount sender, RecipentInfo memory to, uint256 amount, TransferId id) internal returns (bool) {
 

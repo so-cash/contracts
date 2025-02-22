@@ -125,6 +125,9 @@ contract RootReferential is ISoCashGlobalReferential {
         BankIdentifier[] memory correspondents = country.getCorrespondentBanks(current.codes, currency);
         hops++;
         for (uint i = 0; i < correspondents.length; i++) {
+          // potentially here we can check if the correspondent has liquidity
+          // the problem is that there are multiple place where the correspondent can get its liquidity
+          // so we can't check it here for now
           r = enqueue(r, correspondents[i], currentIndex);
         }
       }

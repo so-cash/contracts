@@ -29,6 +29,8 @@ interface ISoCashGlobalReferential {
 
   // function to resolve the routing, finding the sequence of banks to reach the provided bank from the provided bank
   function resolveRoute(bytes3 currency, BankIdentifier memory from, BankIdentifier memory target) external view returns (bool resolved, BankIdentifier[] memory route);
+
+  // TODO: add a decodeIBAN function to resolve any IBAN based on the declared modules in the referential and use the Iban to Account of the bank module
 }
 
 

@@ -252,7 +252,7 @@ export function cleanStruct(s: any): Record<string, any> {
   return res;
 }
 
-function mapValue(v: any): any {
+export function mapValue(v: any): any {
   if (typeof v === "string") {
     if (mapAddress.has(v)) return mapAddress.get(v) || `${v}`;
   }
@@ -262,7 +262,9 @@ function mapValue(v: any): any {
 export function cleanStructAndMap(s: any): Record<string, any> {
   const obj: any = cleanStruct(s);
   if (Array.isArray(obj) && obj.length == Object.keys(obj).length)
-    return obj.map(mapValue);
+    return obj.map((v) =>
+      typeof v === "object" ? cleanStructAndMap(v) : mapValue(v),
+    );
   const res: Record<string, any> = {};
   if (obj && typeof obj === "object") {
     for (const key of Object.keys(obj)) {
@@ -286,4 +288,14 @@ export function fromBytes(value: string | Buffer): string {
     b = Buffer.from(value, "hex");
   } else b = value;
   return b.toString("utf8").replaceAll("\x00", "");
+}
+
+export function extractErrorMessage(e: Error) {
+  let msg = e.message || e.toString();
+  const values = msg.split(":").map((s) => s.trim());
+
+  if (values.length >= 2 && values[1].startsWith("revert")) {
+    values[1] = values[1].replace("revert", "").trim();
+  }
+  return values.slice(1).join(": ");
 }

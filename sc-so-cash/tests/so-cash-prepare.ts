@@ -13,6 +13,12 @@ import {
   bankAccountSoCash,
   toBuffer,
   bankAccountERC20,
+  receipientInfo,
+  mapValue,
+  cleanStructAndMap,
+  cleanStruct,
+  extractErrorMessage,
+  ZeroAddress,
 } from "@so-cash/sc-shared";
 import {
   EventReceiver,
@@ -20,7 +26,7 @@ import {
   SmartContractInstance,
   SmartContracts,
 } from "@saturn-chain/smart-contract";
-import { EthProviderInterface } from "@saturn-chain/dlt-tx-data-functions";
+import { ZeroAccount } from "./constants";
 
 const Subscriptions: EventReceiver[] = [];
 
@@ -672,4 +678,164 @@ export async function prepareMultyCcyContracts(
     BankSubs,
     AccountSubs,
   };
+}
+
+enum BankModel {
+  UNDEFINED = "0",
+  SO_CASH = "1",
+  ERC20 = "2",
+}
+interface BankAccount {
+  model: BankModel;
+  bank: string;
+  account: string;
+}
+interface ExplainPlanStruct {
+  transferId: string;
+  debitLocalAccount: string;
+  creditLocalAccount: string;
+  payFromNostro: string;
+  payViaBank: string;
+  payViaAccount: BankAccount; // { model: '2', bank: 'EURCoin', account: 'Bank:AGRIFRPP.EUR' },
+  payToAccount: BankAccount; // { model: '2', bank: 'EURCoin', account: 'Bank:BOFAUS3N.EUR' }
+}
+
+export async function simulateEndToEndTransfer(
+  fromBank: Awaited<ReturnType<typeof declareBank>>,
+  fromAccountOrBank: SmartContractInstance, //  can be either a bank or an account if it is an interbank transfer simulation or a transfer simulation
+  to: ReturnType<typeof receipientInfo>,
+  amount: number,
+  isInterbank = false,
+): Promise<{
+  error?: string;
+  recipient: ReturnType<typeof receipientInfo>;
+  amount: number;
+  plans: { bank: string; plan: ExplainPlanStruct }[];
+}> {
+  const res = {
+    error: undefined as string | undefined,
+    recipient: to,
+    amount,
+    plans: [] as { bank: string; plan: ExplainPlanStruct }[],
+  };
+
+  try {
+    let plan: ExplainPlanStruct = isInterbank
+      ? await fromBank.bank.simulateInterbankTransfer(
+          fromBank.boUser.call(),
+          fromAccountOrBank.deployedAt,
+          to,
+          amount,
+        )
+      : await fromBank.bank.simulateTransfer(
+          fromBank.boUser.call(),
+          fromAccountOrBank.deployedAt,
+          to,
+          amount,
+        );
+    plan = cleanStruct(plan) as any;
+    // fix the debit account that is not yet deployed with this fix
+    if (isInterbank && plan.debitLocalAccount != ZeroAccount)
+      plan.debitLocalAccount = ZeroAccount;
+    // const cleaned = cleanStructAndMap(plan);
+    // console.log("plan received:", cleaned);
+    res.plans.push({ bank: fromBank.bank.deployedAt, plan });
+
+    if (plan.payFromNostro != ZeroAccount) {
+      // we have to simulate the payment from this account to the recipient
+      const nostroInstance = allContracts
+        .get(contractsNames.cash.account)
+        .at(plan.payFromNostro);
+      const nostroBankAddress = await nostroInstance.bank(
+        fromBank.boUser.call(),
+      );
+      const nostroBank: Awaited<ReturnType<typeof declareBank>> = {
+        ...fromBank, // id is not correct but it is not used, so nevermind
+        bank: allContracts.get(contractsNames.cash.bank).at(nostroBankAddress),
+      };
+      const subRes = await simulateEndToEndTransfer(
+        nostroBank,
+        nostroInstance,
+        to,
+        amount,
+      );
+      if (subRes.error) res.error = subRes.error;
+      else res.plans.push(...subRes.plans);
+    }
+    if (plan.payViaAccount.model != BankModel.UNDEFINED) {
+      // we have a transfer between this account and the payToAccount to simulate
+      if (plan.payViaAccount.model == BankModel.SO_CASH) {
+        const viaAccount = allContracts
+          .get(contractsNames.cash.account)
+          .at(plan.payViaAccount.account);
+        const viaAccountBank: Awaited<ReturnType<typeof declareBank>> = {
+          ...fromBank,
+          bank: allContracts
+            .get(contractsNames.cash.bank)
+            .at(plan.payViaAccount.bank),
+        };
+        const subRes = await simulateEndToEndTransfer(
+          viaAccountBank,
+          viaAccount,
+          receipientInfo(plan.payToAccount.account),
+          amount,
+        );
+        if (subRes.error) res.error = subRes.error;
+        else res.plans.push(...subRes.plans);
+      } else {
+        // this is ERC20 model, we have nothing to simulate
+        res.plans.push({
+          bank: plan.payViaAccount.bank,
+          plan: {
+            transferId: "ERC20",
+            debitLocalAccount: plan.payViaAccount.account,
+            creditLocalAccount: plan.payToAccount.account,
+            payFromNostro: ZeroAccount,
+            payViaBank: ZeroAddress,
+            payViaAccount: {
+              model: BankModel.UNDEFINED,
+              account: ZeroAccount,
+              bank: ZeroAddress,
+            },
+            payToAccount: {
+              model: BankModel.UNDEFINED,
+              account: ZeroAccount,
+              bank: ZeroAddress,
+            },
+          },
+        });
+      }
+    }
+    if (plan.payViaBank != ZeroAddress) {
+      // we have to notify the bank of an interbank transfer
+      try {
+        const bankInstance = allContracts
+          .get(contractsNames.cash.bank)
+          .at(plan.payViaBank);
+        const viaBank: Awaited<ReturnType<typeof declareBank>> = {
+          ...fromBank,
+          bank: bankInstance,
+        };
+        const subRes = await simulateEndToEndTransfer(
+          viaBank,
+          fromBank.bank,
+          to,
+          amount,
+          true,
+        );
+        if (subRes.error) res.error = subRes.error;
+        else res.plans.push(...subRes.plans);
+      } catch (error: any) {
+        res.error = `Impossible to accept incoming transfer: the bank ${mapValue(plan.payViaBank)} rejected with error "${extractErrorMessage(error)}"`;
+        console.log(res.error);
+      }
+    }
+  } catch (error: any) {
+    res.error = `Impossible to transfer: the bank ${mapValue(fromBank.bank.deployedAt)} rejected with error "${extractErrorMessage(error)}"`;
+    console.log(res.error);
+  }
+
+  // console.log("FINAL PLANS:", cleanStructAndMap(res.recipient), ...res.plans.map(p=>cleanStructAndMap(p)));
+
+  return res;
 }
