@@ -5,16 +5,16 @@
   "main": "build/index.js",
   "type": "module",
   "scripts": {
-    "test": "mocha --package ../../../package.json",
+    "test": "mocha --help",
     "build": "./build.sh",
     "build:mon": "nodemon -w src -e sol --exec ./build.sh"
   },
   "keywords": [],
   "author": "Mohamed Toub",
   "contributors": [
-		"Guénolé de Cadoudal",
-		"Youssef Maghzaz"
-	],
+    "Guénolé de Cadoudal",
+    "Youssef Maghzaz"
+  ],
   "license": "MIT",
   "devDependencies": {
     "@saturn-chain/dlt-tx-data-functions": "^1.0.9",

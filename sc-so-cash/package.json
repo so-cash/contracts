@@ -5,7 +5,7 @@
   "main": "build/index.js",
   "type": "module",
   "scripts": {
-    "test": "mocha --package ../../../package.json",
+    "test": "mocha --package ../package.json",
     "build": "./build.sh",
     "build:mon": "nodemon -w src -e sol --exec ./build.sh"
   },

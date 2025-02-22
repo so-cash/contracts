@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "workspaces": [
+    "sc-diamond",
     "sc-so-cash",
     "sc-so-cash-referentials",
     "shared"
@@ -17,9 +18,8 @@
     "ts-fences": "^0.2.0"
   },
   "scripts": {
-    "start": "lerna run start --parallel",
-    "dev": "lerna run dev --parallel",
     "build": "lerna run build --parallel",
+    "test": "lerna run test",
     "formatter:check": "prettier . --check",
     "formatter:exec": "prettier --write --list-different ."
   },
