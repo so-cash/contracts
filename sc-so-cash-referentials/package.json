@@ -30,6 +30,7 @@
     "web3": "^1.6.0"
   },
   "dependencies": {
+    "@fever-tokens/diamond": "^1.0.0",
     "@openzeppelin/contracts": "^4.3.2",
     "@saturn-chain/smart-contract": "^1.0.19"
   }
