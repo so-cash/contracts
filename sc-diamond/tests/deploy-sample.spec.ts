@@ -27,6 +27,7 @@ function executioner(
     deployer: async (
       name: string,
       contract: CompiledSmartContract,
+      flags: { isFacet?: boolean; isUpgrade?: boolean },
       ...args: any[]
     ) => {
       const sc = dContracts.get(name);

@@ -80,6 +80,7 @@ export interface IExecutioner {
   deployer: (
     name: string,
     contract: CompiledSmartContract,
+    flags: { isFacet?: boolean; isUpgrade?: boolean },
     ...args: any[]
   ) => Promise<string>;
   executer: (
@@ -242,20 +243,25 @@ export class Diamond {
   protected static getContractFromCombined(
     combined: InternalComibinedFile,
     name: string,
+    backup?: string,
   ): CompiledSmartContract {
     const fullName: ContractFullName =
       combined.names.get(name) || (name as ContractFullName);
     const contract = combined.contracts[fullName];
     if (!contract) {
+      if (backup) {
+        return Diamond.getContractFromCombined(combined, backup);
+      }
       throw new Error(`Contract ${name} not found in combined json`);
     }
     return contract;
   }
 
-  getContract(name: string): CompiledSmartContract {
+  getContract(name: string, backup?: string): CompiledSmartContract {
     const contract = Diamond.getContractFromCombined(
       this.internalCombined,
       name,
+      backup,
     );
     return contract;
   }
@@ -326,7 +332,9 @@ export class Diamond {
     ]) {
       const contract = this.getContract(name);
       // no parameters expected
-      facetAddresses[name] = await this.executioner.deployer(name, contract);
+      facetAddresses[name] = await this.executioner.deployer(name, contract, {
+        isFacet: true,
+      });
     }
     // deploy the root contract
     const rootContract = this.getContract(this.config.rootName);
@@ -334,6 +342,7 @@ export class Diamond {
     const rootAddress = await this.executioner.deployer(
       this.config.rootName,
       rootContract,
+      { isFacet: false },
       facetAddresses[this.config.readableName],
       facetAddresses[this.config.writableName],
       this.buildInitializeData(),
@@ -342,7 +351,7 @@ export class Diamond {
     // now cut the diamond by adding the facets
     const diamondCut = this.config.facetNames.map<DiamondCut>((name) => ({
       target: facetAddresses[name],
-      selectors: this.listAbiSelectors(this.getContract(`I${name}`)),
+      selectors: this.listAbiSelectors(this.getContract(`I${name}`, name)),
       action: FacetCutAction.Add,
     }));
 
@@ -382,7 +391,11 @@ export class Diamond {
     for (const name of newFacets) {
       const contract = this.getContract(name);
       // no parameters expected, deploy
-      newFacetAddresses[name] = await this.executioner.deployer(name, contract);
+      newFacetAddresses[name] = await this.executioner.deployer(
+        name,
+        contract,
+        { isFacet: true, isUpgrade: true },
+      );
       // get the list of selectors of the new facet
       newFacetFunctions.push(
         ...this.internalCombined.contractSelectors
