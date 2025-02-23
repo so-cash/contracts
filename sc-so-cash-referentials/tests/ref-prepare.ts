@@ -1,5 +1,6 @@
 import Web3 from "web3";
 
+import refCombined from "../build/combined.json" assert { type: "json" };
 import refContracts from "../build";
 import {
   map,
@@ -10,12 +11,72 @@ import {
   checkContractCompilation,
 } from "@so-cash/sc-shared";
 
+import {
+  CombinedFile,
+  CompiledSmartContract,
+  Diamond,
+  DiamondCreateConfig,
+  IExecutioner,
+} from "@fever-tokens/diamond/ts-lib";
+
+const executionerContractMap = new Map<string, string>();
+function executioner(
+  wallet: Awaited<ReturnType<typeof getNewWallet>>,
+): IExecutioner {
+  return {
+    deployer: async (
+      name: string,
+      contract: CompiledSmartContract,
+      flags: { isFacet?: boolean; isUpgrade?: boolean },
+      ...args: any[]
+    ) => {
+      if (
+        flags.isFacet &&
+        !flags.isUpgrade &&
+        executionerContractMap.has(name)
+      ) {
+        return executionerContractMap.get(name)!;
+      } else {
+        const sc = refContracts.get(name);
+        const instance = await sc.deploy(wallet.newi(), ...args);
+        executionerContractMap.set(name, instance.deployedAt);
+        return instance.deployedAt;
+      }
+    },
+    executer: async (
+      name: string,
+      contract: CompiledSmartContract,
+      target: string,
+      funct: string,
+      ...args: any[]
+    ) => {
+      const sc = refContracts.get(name);
+      const instance = sc.at(target);
+      return instance[funct](wallet.send(), ...args);
+    },
+    reader: async (
+      name: string,
+      contract: CompiledSmartContract,
+      target: string,
+      funct: string,
+      ...args: any[]
+    ) => {
+      const sc = refContracts.get(name);
+      const instance = sc.at(target);
+      return instance[funct](wallet.call(), ...args);
+    },
+  };
+}
+
 export async function prepareContracts(web3: Web3, subs: boolean = true) {
   // check all contracts are present
   checkContractCompilation(refContracts, contractsNames.ref);
+  checkContractCompilation(refContracts, contractsNames.refdiamond);
 
-  const rootContract = refContracts.get(contractsNames.ref.root);
-  const countryContract = refContracts.get(contractsNames.ref.country);
+  const rootContract = refContracts.get(contractsNames.refdiamond.root.intf);
+  const countryContract = refContracts.get(
+    contractsNames.refdiamond.country.intf,
+  );
 
   const adminUser = await getNewWallet(web3, "admin", true);
   const adminFRUser = await getNewWallet(web3, "adminFR");
@@ -33,18 +94,62 @@ export async function prepareContracts(web3: Web3, subs: boolean = true) {
   if (CountrySub) CountrySub.on("log", traceEventLog("COUNTRY"));
 
   // deploy the root referential
-  const root = await rootContract.deploy(adminUser.newi());
+  // const root = await rootContract.deploy(adminUser.newi());
+  const rootDiamond = new Diamond(
+    {
+      combinedJson: refCombined as CombinedFile,
+      rootName: contractsNames.refdiamond.root.base,
+      readableName: contractsNames.refdiamond.root.readable,
+      writableName: contractsNames.refdiamond.root.writable,
+      facetNames: [
+        contractsNames.refdiamond.root.finder,
+        contractsNames.refdiamond.root.countryManager,
+      ],
+      initializeFunctionName: "initialize",
+      initializeFunctionArgs: [],
+    },
+    executioner(adminUser),
+  );
+  const rootDeployed = await rootDiamond.deploy();
+  const root = rootContract.at(rootDeployed.rootAddress);
+
+  const countryConfig: DiamondCreateConfig = {
+    combinedJson: refCombined as CombinedFile,
+    rootName: contractsNames.refdiamond.country.base,
+    readableName: contractsNames.refdiamond.country.readable,
+    writableName: contractsNames.refdiamond.country.writable,
+    facetNames: [
+      contractsNames.oppenzeppelin.ownable,
+      contractsNames.refdiamond.country.bankController,
+      contractsNames.refdiamond.country.countryState,
+    ],
+    initializeFunctionName: "initialize",
+    initializeFunctionArgs: [], // To be fixed by country
+  };
 
   // deploy FR and US country referentials
-  const countryFR = await countryContract.deploy(
-    adminFRUser.newi(),
-    Buffer.from("FR"),
+  // const countryFR = await countryContract.deploy(
+  //   adminFRUser.newi(),
+  //   Buffer.from("FR"),
+  // );
+  let countryDiamond = new Diamond(
+    { ...countryConfig, initializeFunctionArgs: [Buffer.from("FR")] },
+    executioner(adminFRUser),
   );
+  const countryFRDeployed = await countryDiamond.deploy();
+  const countryFR = countryContract.at(countryFRDeployed.rootAddress);
   map(countryFR.deployedAt, "CountryFR");
-  const countryUS = await countryContract.deploy(
-    adminUSUser.newi(),
-    Buffer.from("US"),
+  // const countryUS = await countryContract.deploy(
+  //   adminUSUser.newi(),
+  //   Buffer.from("US"),
+  // );
+
+  countryDiamond = new Diamond(
+    { ...countryConfig, initializeFunctionArgs: [Buffer.from("US")] },
+    executioner(adminUSUser),
   );
+  const countryUSDeployed = await countryDiamond.deploy();
+  const countryUS = countryContract.at(countryUSDeployed.rootAddress);
   map(countryUS.deployedAt, "CountryUS");
 
   // register the country referentials to the root

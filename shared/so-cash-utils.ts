@@ -1,4 +1,3 @@
-import Web3 from "web3";
 import { sha256 } from "js-sha256";
 import crypto from "crypto";
 import {
@@ -29,17 +28,42 @@ export const contractsNames = {
     country: "CountryReferential",
     stablecoin: "Stablecoin",
   },
+  refdiamond: {
+    root: {
+      intf: "ISoCashGlobalReferential",
+      base: "GlobalReferentialDiamond",
+      readable: "GlobalReferentialDiamondReadable",
+      writable: "GlobalReferentialDiamondWritable",
+      finder: "PathFinder",
+      countryManager: "CountryManager",
+    },
+    country: {
+      intf: "ISoCashCountryReferential",
+      base: "CountryReferentialDiamond",
+      readable: "CountryReferentialDiamondReadable",
+      writable: "CountryReferentialDiamondWritable",
+      bankController: "BankController",
+      countryState: "CountryStateManagement",
+    },
+  },
+  oppenzeppelin: {
+    ownable: "Ownable",
+  },
   cashPooling: {
     cashPool: "SoCashPooling",
   },
 };
 
+export type ContractNamesType = { [key: string]: string | ContractNamesType };
+
 export function checkContractCompilation(
   contracts: SmartContracts,
-  contractsNames: { [key: string]: string },
+  contractsNames: ContractNamesType,
 ) {
   for (const contractName of Object.values(contractsNames)) {
-    if (!contracts.get(contractName)) {
+    if (typeof contractName === "object") {
+      checkContractCompilation(contracts, contractName);
+    } else if (!contracts.get(contractName)) {
       throw new Error(`Contract ${contractName} not found`);
     } else {
       // console.log(`Contract ${contractName} found`);

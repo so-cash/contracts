@@ -21,28 +21,40 @@ struct BankAccount {
   address account; // our account with this bank or the address to represent the ERC20 account (expected to be the address of CurrencyModule)
 }
 
-interface ISoCashGlobalReferential {
+interface ISoCashCountryManagerInternal {
   event CountrySet(bytes2 indexed country, ISoCashCountryReferential indexed countryContract);
-  // set by a global administrator - future governance model to be defined to prevent centralisation
+}
+
+interface ISoCashCountryManager {
   function setCountry(ISoCashCountryReferential countryContract) external;
   function getCountry(bytes2 country) external view returns (ISoCashCountryReferential);
+}
 
+interface ISoCashPathFinder {
   // function to resolve the routing, finding the sequence of banks to reach the provided bank from the provided bank
   function resolveRoute(bytes3 currency, BankIdentifier memory from, BankIdentifier memory target) external view returns (bool resolved, BankIdentifier[] memory route);
 
   // TODO: add a decodeIBAN function to resolve any IBAN based on the declared modules in the referential and use the Iban to Account of the bank module
 }
 
+interface ISoCashGlobalReferential is ISoCashCountryManager, ISoCashCountryManagerInternal, ISoCashPathFinder {
 
-interface ISoCashCountryReferential {
-  function countryCode() external view returns (bytes2);
+}
 
-  // called only by the controller/owner of the country
+interface ISoCashBankControllerInternal {
   event BankControllerSet(CodeType indexed bankCode, address controller, bool indexed allowed);
+}
+
+interface ISoCashBankController {
+  // called only by the controller/owner of the country
   function setBankController(CodeType bankCode, address controller) external;
   function unsetBankController(CodeType bankCode, address controller) external;
   function isBankController(CodeType bankCode, address controller) external view returns (bool);
-  
+}
+
+interface ISoCashCountryStateManagement {
+    function countryCode() external view returns (bytes2);
+
   // functions for the banks to setup its config. codes are one, two or possbly more codes to reach the bank (bank code, branch code ...)
   event BankModuleSet(CodeType indexed bankCode, CodeType[] codes, bytes3 indexed currency, ISoCashBankExternal indexed bankModule);
   event FXProviderSet(CodeType indexed bankCode, ISoCashFXProvider indexed fxProvider, bool indexed added);
@@ -66,4 +78,8 @@ interface ISoCashCountryReferential {
   function getCorrespondentBanks(CodeType[] memory codes, bytes3 currency) external view returns (BankIdentifier[] memory correspondents);
   function isCorrespondent(CodeType[] memory codes, bytes3 currency, BankIdentifier memory correspondent) external view returns (bool);
   function getSSI(CodeType[] memory codes, bytes3 currency) external view returns (BankAccount memory account);
+}
+
+interface ISoCashCountryReferential is ISoCashBankController, ISoCashBankControllerInternal, ISoCashCountryStateManagement{
+
 }
