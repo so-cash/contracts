@@ -1,13 +1,11 @@
 import { sha256 } from "js-sha256";
 import crypto from "crypto";
-import {
-  SmartContractInstance,
-  SmartContracts,
-} from "@saturn-chain/smart-contract";
+import SaturnPkg, { type SmartContracts, type SmartContractInstance} from "@saturn-chain/smart-contract";
+const { SmartContracts: SmartContractsClass } = SaturnPkg;
 import { EthProviderInterface } from "@saturn-chain/dlt-tx-data-functions";
-import soCashContracts from "@so-cash/sc-so-cash";
 import { blockTimestamp } from "./dates";
-import { ZeroAddress, map, toBuffer } from "./utils";
+import { ZeroAddress, executioner, map, toBuffer } from "./utils";
+import {CombinedFile, Diamond} from "@fever-tokens/diamond/ts-lib";
 
 export const contractsNames = {
   cash: {
@@ -17,6 +15,19 @@ export const contractsNames = {
     ibanCalc: "IBANCalculator",
     paymentEngine: "PaymentEngine",
     sharedFunctions: "SharedFunctions",
+  },
+  cashdiamond: {
+    account: {
+      intf: "ISoCashAccountFull",
+      base: "SoCashAccountDiamond",
+      readable: "SoCashAccountDiamondReadable",
+      writable: "SoCashAccountDiamondWritable",
+      // facets
+      whitelist: "WhitelistedSenders",
+      data: "AccountData",
+      htlc: "HTLCPayment",
+      actions: "AccountActions",
+    }
   },
   amm: {
     amm: "CPAMM",
@@ -34,6 +45,7 @@ export const contractsNames = {
       base: "GlobalReferentialDiamond",
       readable: "GlobalReferentialDiamondReadable",
       writable: "GlobalReferentialDiamondWritable",
+      // facets
       finder: "PathFinder",
       countryManager: "CountryManager",
     },
@@ -42,6 +54,7 @@ export const contractsNames = {
       base: "CountryReferentialDiamond",
       readable: "CountryReferentialDiamondReadable",
       writable: "CountryReferentialDiamondWritable",
+      // facets
       bankController: "BankController",
       countryState: "CountryStateManagement",
     },
@@ -71,14 +84,52 @@ export function checkContractCompilation(
   }
 }
 
+let __combinedJson: CombinedFile|undefined = undefined;
+let __smartContractsLoaded: SmartContracts|undefined = undefined;
+export function setSoCashCombinedJson(combinedJson: CombinedFile) {
+  __combinedJson = combinedJson;
+  __smartContractsLoaded = SmartContractsClass.load(__combinedJson);
+}
+function getSoCashCombinedJson() {
+  if (!__combinedJson) {
+    throw new Error("Combined JSON not initialized");
+  }
+  return __combinedJson;
+}
+function getSoCashContracts() {
+  if (!__smartContractsLoaded) {
+    throw new Error("Smart Contracts not initialized");
+  }
+  return __smartContractsLoaded;
+}
+
 export async function createAccount(
   name: string,
   inBank: SmartContractInstance,
   owner: EthProviderInterface,
   forBank?: SmartContractInstance,
 ): Promise<SmartContractInstance> {
-  const accountContract = soCashContracts.get(contractsNames.cash.account);
-  const account = await accountContract.deploy(owner.newi(), name);
+  const accountContract = getSoCashContracts().get(contractsNames.cashdiamond.account.intf);
+  const accountDiamond = new Diamond({
+    combinedJson: getSoCashCombinedJson(),
+    rootName: contractsNames.cashdiamond.account.base,
+    readableName: contractsNames.cashdiamond.account.readable,
+    writableName: contractsNames.cashdiamond.account.writable,
+    facetNames: [
+      contractsNames.oppenzeppelin.ownable,
+      contractsNames.cashdiamond.account.whitelist,
+      contractsNames.cashdiamond.account.data,
+      contractsNames.cashdiamond.account.htlc,
+      contractsNames.cashdiamond.account.actions,
+    ],
+    initializeFunctionName: "initialize",
+    initializeFunctionArgs: [name]
+  }, executioner(getSoCashContracts(), owner),
+  [/diamond/, /fever-tokens/, /openzeppelin/]
+);
+  const accountDeployed = await accountDiamond.deploy();
+  // const account = await accountContract.deploy(owner.newi(), name);
+  const account = accountContract.at(accountDeployed.rootAddress);
   map(account.deployedAt, name);
   await account.transferOwnership(owner.send(), inBank.deployedAt);
   await inBank.registerAccount(owner.send(), account.deployedAt);

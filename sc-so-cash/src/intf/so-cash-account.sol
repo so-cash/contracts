@@ -7,17 +7,13 @@ import "../intf/whitelisted-senders.sol";
 import "../intf/htlc-payment.sol";
 import "../utilities/whitelisted-senders.sol";
 import "./so-cash-types.sol";
-interface ISoCashOwnedAccount is ISoCashAccount, IERC20Metadata {
+
+interface ISoCashAccountData {
   function bank() external view returns (ISoCashBank);
 
-  function name() external view returns(string memory);
   function iban() external view returns(string memory);
   function accountNumber() external view returns(AccountNumber);
 
-  function balance() external view returns(uint256);
-  function lockedBalance() external view returns(uint256);
-  function unlockedBalance() external view returns(uint256);
-  function fullBalance() external view returns(int256);
 
   function getAttributeStr(bytes32 name) view external returns(string memory);
   function setAttributeStr(bytes32 name, string memory value) external;
@@ -25,6 +21,14 @@ interface ISoCashOwnedAccount is ISoCashAccount, IERC20Metadata {
   function setAttributeNum(bytes32 name, int value) external;
   function getAttributeAddr(bytes32 name) view external returns(address);
   function setAttributeAddr(bytes32 name, address value) external;
+}
+
+interface ISoCashAccountActions  {
+  function balance() external view returns(uint256);
+  function lockedBalance() external view returns(uint256);
+  function unlockedBalance() external view returns(uint256);
+  function fullBalance() external view returns(int256);
+
 
   function transferEx(RecipentInfo calldata recipient, uint256 amount, string calldata details) external returns (bool);
 
@@ -33,6 +37,10 @@ interface ISoCashOwnedAccount is ISoCashAccount, IERC20Metadata {
               string calldata opaque) external returns (bytes32 key);
   function transferLockedFunds(bytes32 key, RecipentInfo calldata recipient, string calldata secret, string calldata details) external returns (bool);
   function unlockFunds(bytes32 key, string calldata secret) external returns (bool);
+}
+
+interface ISoCashOwnedAccount is ISoCashAccountActions, ISoCashAccount, ISoCashAccountData, IERC20Metadata {
+
 }
 
 interface ISoCashAccountFull is ISoCashOwnedAccount, IHTLCPayment, IWhitelistedSenders, IOwnable {}

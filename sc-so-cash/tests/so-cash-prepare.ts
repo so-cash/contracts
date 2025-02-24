@@ -2,6 +2,7 @@ import Web3 from "web3";
 
 import referentialContracts from "@so-cash/sc-so-cash-ref";
 import allContracts from "../build";
+import accContractsJson from "../build/combined.json" assert { type: "json" };
 import {
   map,
   traceEventLog,
@@ -15,10 +16,10 @@ import {
   bankAccountERC20,
   receipientInfo,
   mapValue,
-  cleanStructAndMap,
   cleanStruct,
   extractErrorMessage,
   ZeroAddress,
+  setSoCashCombinedJson,
 } from "@so-cash/sc-shared";
 import {
   EventReceiver,
@@ -27,7 +28,7 @@ import {
   SmartContracts,
 } from "@saturn-chain/smart-contract";
 import { ZeroAccount } from "./constants";
-
+setSoCashCombinedJson(accContractsJson as any);
 const Subscriptions: EventReceiver[] = [];
 
 function addSubscription(s: EventReceiver) {
@@ -290,7 +291,7 @@ export async function prepareContracts(
   const countryRef = referentialContracts.get(contractsNames.ref.country);
 
   const bankContract = allContracts.get(contractsNames.cash.bank);
-  const accountContract = allContracts.get(contractsNames.cash.account);
+  const accountContract = allContracts.get(contractsNames.cashdiamond.account.intf);
   // const ibanCalcContract = allContracts.get(contractsNames.cash.ibanCalc);
 
   const rootUser = await getNewWallet(web3, "rootUser", true);
@@ -579,7 +580,7 @@ export async function prepareMultyCcyContracts(
   const countryRef = referentialContracts.get(contractsNames.ref.country);
 
   const bankContract = allContracts.get(contractsNames.cash.bank);
-  const accountContract = allContracts.get(contractsNames.cash.account);
+  const accountContract = allContracts.get(contractsNames.cashdiamond.account.intf);
   // const ibanCalcContract = allContracts.get(contractsNames.cash.ibanCalc);
 
   const rootUser = await getNewWallet(web3, "rootUser", true);

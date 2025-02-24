@@ -9,64 +9,15 @@ import {
   createAccount,
   getNewWallet,
   checkContractCompilation,
+  executioner,
 } from "@so-cash/sc-shared";
 
 import {
   CombinedFile,
-  CompiledSmartContract,
   Diamond,
   DiamondCreateConfig,
-  IExecutioner,
 } from "@fever-tokens/diamond/ts-lib";
 
-const executionerContractMap = new Map<string, string>();
-function executioner(
-  wallet: Awaited<ReturnType<typeof getNewWallet>>,
-): IExecutioner {
-  return {
-    deployer: async (
-      name: string,
-      contract: CompiledSmartContract,
-      flags: { isFacet?: boolean; isUpgrade?: boolean },
-      ...args: any[]
-    ) => {
-      if (
-        flags.isFacet &&
-        !flags.isUpgrade &&
-        executionerContractMap.has(name)
-      ) {
-        return executionerContractMap.get(name)!;
-      } else {
-        const sc = refContracts.get(name);
-        const instance = await sc.deploy(wallet.newi(), ...args);
-        executionerContractMap.set(name, instance.deployedAt);
-        return instance.deployedAt;
-      }
-    },
-    executer: async (
-      name: string,
-      contract: CompiledSmartContract,
-      target: string,
-      funct: string,
-      ...args: any[]
-    ) => {
-      const sc = refContracts.get(name);
-      const instance = sc.at(target);
-      return instance[funct](wallet.send(), ...args);
-    },
-    reader: async (
-      name: string,
-      contract: CompiledSmartContract,
-      target: string,
-      funct: string,
-      ...args: any[]
-    ) => {
-      const sc = refContracts.get(name);
-      const instance = sc.at(target);
-      return instance[funct](wallet.call(), ...args);
-    },
-  };
-}
 
 export async function prepareContracts(web3: Web3, subs: boolean = true) {
   // check all contracts are present
@@ -108,7 +59,7 @@ export async function prepareContracts(web3: Web3, subs: boolean = true) {
       initializeFunctionName: "initialize",
       initializeFunctionArgs: [],
     },
-    executioner(adminUser),
+    executioner(refContracts, adminUser),
   );
   const rootDeployed = await rootDiamond.deploy();
   const root = rootContract.at(rootDeployed.rootAddress);
@@ -134,7 +85,7 @@ export async function prepareContracts(web3: Web3, subs: boolean = true) {
   // );
   let countryDiamond = new Diamond(
     { ...countryConfig, initializeFunctionArgs: [Buffer.from("FR")] },
-    executioner(adminFRUser),
+    executioner(refContracts, adminFRUser),
   );
   const countryFRDeployed = await countryDiamond.deploy();
   const countryFR = countryContract.at(countryFRDeployed.rootAddress);
@@ -146,7 +97,7 @@ export async function prepareContracts(web3: Web3, subs: boolean = true) {
 
   countryDiamond = new Diamond(
     { ...countryConfig, initializeFunctionArgs: [Buffer.from("US")] },
-    executioner(adminUSUser),
+    executioner(refContracts, adminUSUser),
   );
   const countryUSDeployed = await countryDiamond.deploy();
   const countryUS = countryContract.at(countryUSDeployed.rootAddress);

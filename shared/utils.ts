@@ -10,9 +10,10 @@ import {
   EthProviderInterface,
   SendOptions,
 } from "@saturn-chain/dlt-tx-data-functions";
-import { EventReceiver } from "@saturn-chain/smart-contract";
+import { EventReceiver, SmartContracts } from "@saturn-chain/smart-contract";
 import Web3 from "web3";
 import inspector from "inspector";
+import { CompiledSmartContract, IExecutioner } from "@fever-tokens/diamond/ts-lib";
 
 const isDebugMode = inspector.url() !== undefined;
 
@@ -44,6 +45,59 @@ map(ZeroAddress, "@Zero");
 export function map(address: string, name: string): void {
   mapAddress.set(address, name);
 }
+
+
+
+const executionerContractMap = new Map<string, string>();
+export function executioner(
+  contracts: SmartContracts,
+  wallet: Awaited<ReturnType<typeof getNewWallet>>,
+): IExecutioner {
+  return {
+    deployer: async (
+      name: string,
+      contract: CompiledSmartContract,
+      flags: { isFacet?: boolean; isUpgrade?: boolean },
+      ...args: any[]
+    ) => {
+      if (
+        flags.isFacet &&
+        !flags.isUpgrade &&
+        executionerContractMap.has(name)
+      ) {
+        return executionerContractMap.get(name)!;
+      } else {
+        const sc = contracts.get(name);
+        const instance = await sc.deploy(wallet.newi(), ...args);
+        executionerContractMap.set(name, instance.deployedAt);
+        return instance.deployedAt;
+      }
+    },
+    executer: async (
+      name: string,
+      contract: CompiledSmartContract,
+      target: string,
+      funct: string,
+      ...args: any[]
+    ) => {
+      const sc = contracts.get(name);
+      const instance = sc.at(target);
+      return instance[funct](wallet.send(), ...args);
+    },
+    reader: async (
+      name: string,
+      contract: CompiledSmartContract,
+      target: string,
+      funct: string,
+      ...args: any[]
+    ) => {
+      const sc = contracts.get(name);
+      const instance = sc.at(target);
+      return instance[funct](wallet.call(), ...args);
+    },
+  };
+}
+
 
 let addressUsed = 0;
 

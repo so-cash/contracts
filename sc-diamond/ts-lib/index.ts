@@ -23,8 +23,13 @@ export interface CombinedFile {
   version: string;
 }
 
+interface ContractInfos {
+  name: string;
+  fullName: ContractFullName;
+  hasCode: boolean;
+}
 interface InternalComibinedFile extends CombinedFile {
-  names: Map<string, ContractFullName>; // contract or library name to full name (file:contract)
+  names: Map<string, ContractInfos>; // contract or library name to full name (file:contract)
   selectorContractMapping: Map<string, string[]>; // selector to list of contract names that have this selector
   functions: Map<string, string>; // function signature to function name
   contractSelectors: Map<string, string[]>; // contract name to list of selectors
@@ -105,17 +110,41 @@ export interface DeployedDiamond {
 }
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
+// 
+function resolvePreference(fullName1: string, fullName2: string, duplicatePref: RegExp[]): string {
+  for (const pref of duplicatePref) {
+    if (pref.test(fullName1)) return fullName1;
+    if (pref.test(fullName2)) return fullName2;
+  }
+  return fullName1;
+}
+
 /** Function to pre process the combined file so that getting the selectors, functions, contract are easier */
-function prepareCombined(combined: CombinedFile): InternalComibinedFile {
-  const names = new Map<string, ContractFullName>();
+function prepareCombined(combined: CombinedFile, duplicatePref: RegExp[]=[]): InternalComibinedFile {
+  const names = new Map<string, ContractInfos>();
   const selectorContractMapping = new Map<string, string[]>();
   const functions = new Map<string, string>();
   const contractSelectors = new Map<string, string[]>();
-  (Object.keys(combined.contracts) as ContractFullName[]).map(
-    (fullName: ContractFullName) => {
+  for( const fullName of Object.keys(combined.contracts) as ContractFullName[]) {
       const [_, name] = fullName.split(":");
+      // check if the contract is already with this name
+      if (names.has(name)) {
+        // resolve the preference
+        const existingFullName = names.get(name)!.fullName;
+        const preferred = resolvePreference(
+          existingFullName,
+          fullName,
+          duplicatePref,
+        );
+        // if we prefer keeping the existing one we skip the new one
+        if (preferred === existingFullName) continue;
+      }
       // maps the contract name to its full name
-      names.set(name, fullName);
+      names.set(name, {
+        name,
+        fullName,
+        hasCode: combined.contracts[fullName].bin.length > 2,
+      });
       // get the contract in the combined file
       const contract = combined.contracts[fullName];
       // extract only the functions from the contract (selector and actual function name)
@@ -139,8 +168,7 @@ function prepareCombined(combined: CombinedFile): InternalComibinedFile {
         name,
         contractFunctions.map((func) => func.selector),
       );
-    },
-  );
+  }
 
   return {
     ...combined,
@@ -158,8 +186,9 @@ export class Diamond {
   constructor(
     private config: DiamondCreateConfig,
     private executioner: IExecutioner,
+    duplicatePref: RegExp[]=[]
   ) {
-    this.internalCombined = prepareCombined(config.combinedJson);
+    this.internalCombined = prepareCombined(config.combinedJson, duplicatePref);
   }
 
   protected async loadFacets(facets?: RawFacet[]) {
@@ -183,6 +212,15 @@ export class Diamond {
       })),
       name: this.findBestContractNameBySelectors(facet.selectors),
     }));
+    // update the config to avoid error in case of new deployment
+    this.config.facetNames = this._facets
+      .map((facet) => facet.name!)
+      .filter(
+        (name) =>
+          name &&
+          name !== this.config.readableName &&
+          name !== this.config.writableName,
+      );
   }
 
   static async fromAddress(
@@ -235,7 +273,7 @@ export class Diamond {
 
   get facets(): Facet[] {
     if (!this._facets) {
-      throw new Error("Diamond Facet not yet knwon");
+      throw new Error("Diamond Facets not yet knwon");
     }
     return this._facets;
   }
@@ -246,7 +284,7 @@ export class Diamond {
     backup?: string,
   ): CompiledSmartContract {
     const fullName: ContractFullName =
-      combined.names.get(name) || (name as ContractFullName);
+      combined.names.get(name)?.fullName || (name as ContractFullName);
     const contract = combined.contracts[fullName];
     if (!contract) {
       if (backup) {
@@ -287,6 +325,8 @@ export class Diamond {
   }
 
   protected listAbiSelectors(contract: CompiledSmartContract): string[] {
+    // console.log("List ABI Selectors:", contract.abi.map(abi=>`\n${abi.type}: ${abi.name}`));
+    
     return contract.abi
       .filter((abi) => abi.type === "function")
       .map((abi) => AbiCoder.encodeFunctionSignature(abi));
@@ -309,9 +349,15 @@ export class Diamond {
           });
       }
     });
+    counts.forEach((count, name) => {
+      // contracts with code have a bonus of one to get it before their interface
+      if (this.internalCombined.names.get(name)?.hasCode) count++;
+      counts.set(name, count);
+    });
+    // console.log("Find best contract name by selectors", selectors, counts.entries());
+
     let bestName: string | undefined;
     let bestCount = 0;
-    // console.log("Find best contract name by selectors", selectors, counts.entries());
 
     counts.forEach((count, name) => {
       if (count > bestCount) {
@@ -322,7 +368,7 @@ export class Diamond {
     return bestName;
   }
 
-  async deploy(): Promise<DeployedDiamond> {
+  async deploy(debug?: boolean): Promise<DeployedDiamond> {
     // start by deploying the facets, readable and writable facets
     const facetAddresses: { [name: string]: string } = {};
     for (const name of [
@@ -354,6 +400,31 @@ export class Diamond {
       selectors: this.listAbiSelectors(this.getContract(`I${name}`, name)),
       action: FacetCutAction.Add,
     }));
+    // console.log("Diamond Cut", diamondCut);
+    // search for duplicates selectors in the facets and display a warning if any
+    const selectors = new Map<string, string[]>();
+    diamondCut.forEach((cut) => {
+      const [name, target] = Object.entries(facetAddresses).find(([_, v]) => v === cut.target)!;
+      cut.selectors.forEach((selector) => {
+        if (selectors.has(selector)) {
+          selectors.get(selector)!.push(name);
+          console.warn(
+            `WARN: Selector ${selector}:${this.internalCombined.functions.get(selector)} is present in multiple facets [${selectors.get(selector)!.join(',')}], this may lead to unexpected behavior`,
+          );
+        } else {
+          selectors.set(selector, [name]);
+        }
+      })
+    });
+    if (debug) {
+      // display the the facets and selectors names
+      this.config.facetNames.forEach((name, index) => {
+        console.log(`Facet ${name} : ${this.internalCombined.names.get(name)?.fullName}`);
+        diamondCut[index].selectors.forEach((selector) => {
+          console.log(`  - ${this.internalCombined.functions.get(selector)} - ${selector}`);
+        });
+      });
+    }
 
     await this.executioner.executer(
       this.config.writableName,
