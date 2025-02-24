@@ -7,7 +7,7 @@ fi
 echo "Using solc as \"$SOLC\""
 $SOLC --version
 # $SOLC -o build --via-ir --optimize --combined-json abi,bin,bin-runtime --overwrite --base-path . --include-path ./node_modules --include-path ../../../node_modules --allow-paths ../../.. src/*/*.sol
-$SOLC -o build --optimize --combined-json abi,bin,bin-runtime --overwrite --base-path . --include-path ./node_modules --include-path ../../../node_modules --allow-paths ../../.. src/*/*.sol src/*/*.sol src/*/*/*.sol
+$SOLC -o build --optimize --combined-json abi,bin,bin-runtime --overwrite --base-path . --include-path ./node_modules --include-path ../../../node_modules --allow-paths ../../.. $(find src -type f -name "*.sol")
 if [ $? -eq 0 ]
 then
   echo "- Create index.js and index.d.ts files"

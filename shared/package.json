@@ -28,6 +28,7 @@
     "secp256k1": "^5.0.1",
     "ts-node": "^10.4.0",
     "typescript": "^4.4.4",
-    "web3": "^1.6.0"
+    "web3": "^1.6.0",
+    "@fever-tokens/diamond": "^1.0.0"
   }
 }
