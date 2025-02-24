@@ -18,7 +18,6 @@ import {
   DiamondCreateConfig,
 } from "@fever-tokens/diamond/ts-lib";
 
-
 export async function prepareContracts(web3: Web3, subs: boolean = true) {
   // check all contracts are present
   checkContractCompilation(refContracts, contractsNames.ref);

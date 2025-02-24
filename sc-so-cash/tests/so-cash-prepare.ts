@@ -291,7 +291,9 @@ export async function prepareContracts(
   const countryRef = referentialContracts.get(contractsNames.ref.country);
 
   const bankContract = allContracts.get(contractsNames.cash.bank);
-  const accountContract = allContracts.get(contractsNames.cashdiamond.account.intf);
+  const accountContract = allContracts.get(
+    contractsNames.cashdiamond.account.intf,
+  );
   // const ibanCalcContract = allContracts.get(contractsNames.cash.ibanCalc);
 
   const rootUser = await getNewWallet(web3, "rootUser", true);
@@ -580,7 +582,9 @@ export async function prepareMultyCcyContracts(
   const countryRef = referentialContracts.get(contractsNames.ref.country);
 
   const bankContract = allContracts.get(contractsNames.cash.bank);
-  const accountContract = allContracts.get(contractsNames.cashdiamond.account.intf);
+  const accountContract = allContracts.get(
+    contractsNames.cashdiamond.account.intf,
+  );
   // const ibanCalcContract = allContracts.get(contractsNames.cash.ibanCalc);
 
   const rootUser = await getNewWallet(web3, "rootUser", true);

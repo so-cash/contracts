@@ -1,11 +1,14 @@
 import { sha256 } from "js-sha256";
 import crypto from "crypto";
-import SaturnPkg, { type SmartContracts, type SmartContractInstance} from "@saturn-chain/smart-contract";
+import SaturnPkg, {
+  type SmartContracts,
+  type SmartContractInstance,
+} from "@saturn-chain/smart-contract";
 const { SmartContracts: SmartContractsClass } = SaturnPkg;
 import { EthProviderInterface } from "@saturn-chain/dlt-tx-data-functions";
 import { blockTimestamp } from "./dates";
 import { ZeroAddress, executioner, map, toBuffer } from "./utils";
-import {CombinedFile, Diamond} from "@fever-tokens/diamond/ts-lib";
+import { CombinedFile, Diamond } from "@fever-tokens/diamond/ts-lib";
 
 export const contractsNames = {
   cash: {
@@ -27,7 +30,7 @@ export const contractsNames = {
       data: "AccountData",
       htlc: "HTLCPayment",
       actions: "AccountActions",
-    }
+    },
   },
   amm: {
     amm: "CPAMM",
@@ -84,8 +87,8 @@ export function checkContractCompilation(
   }
 }
 
-let __combinedJson: CombinedFile|undefined = undefined;
-let __smartContractsLoaded: SmartContracts|undefined = undefined;
+let __combinedJson: CombinedFile | undefined = undefined;
+let __smartContractsLoaded: SmartContracts | undefined = undefined;
 export function setSoCashCombinedJson(combinedJson: CombinedFile) {
   __combinedJson = combinedJson;
   __smartContractsLoaded = SmartContractsClass.load(__combinedJson);
@@ -109,24 +112,28 @@ export async function createAccount(
   owner: EthProviderInterface,
   forBank?: SmartContractInstance,
 ): Promise<SmartContractInstance> {
-  const accountContract = getSoCashContracts().get(contractsNames.cashdiamond.account.intf);
-  const accountDiamond = new Diamond({
-    combinedJson: getSoCashCombinedJson(),
-    rootName: contractsNames.cashdiamond.account.base,
-    readableName: contractsNames.cashdiamond.account.readable,
-    writableName: contractsNames.cashdiamond.account.writable,
-    facetNames: [
-      contractsNames.oppenzeppelin.ownable,
-      contractsNames.cashdiamond.account.whitelist,
-      contractsNames.cashdiamond.account.data,
-      contractsNames.cashdiamond.account.htlc,
-      contractsNames.cashdiamond.account.actions,
-    ],
-    initializeFunctionName: "initialize",
-    initializeFunctionArgs: [name]
-  }, executioner(getSoCashContracts(), owner),
-  [/diamond/, /fever-tokens/, /openzeppelin/]
-);
+  const accountContract = getSoCashContracts().get(
+    contractsNames.cashdiamond.account.intf,
+  );
+  const accountDiamond = new Diamond(
+    {
+      combinedJson: getSoCashCombinedJson(),
+      rootName: contractsNames.cashdiamond.account.base,
+      readableName: contractsNames.cashdiamond.account.readable,
+      writableName: contractsNames.cashdiamond.account.writable,
+      facetNames: [
+        contractsNames.oppenzeppelin.ownable,
+        contractsNames.cashdiamond.account.whitelist,
+        contractsNames.cashdiamond.account.data,
+        contractsNames.cashdiamond.account.htlc,
+        contractsNames.cashdiamond.account.actions,
+      ],
+      initializeFunctionName: "initialize",
+      initializeFunctionArgs: [name],
+    },
+    executioner(getSoCashContracts(), owner),
+    [/diamond/, /fever-tokens/, /openzeppelin/],
+  );
   const accountDeployed = await accountDiamond.deploy();
   // const account = await accountContract.deploy(owner.newi(), name);
   const account = accountContract.at(accountDeployed.rootAddress);

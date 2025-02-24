@@ -13,7 +13,10 @@ import {
 import { EventReceiver, SmartContracts } from "@saturn-chain/smart-contract";
 import Web3 from "web3";
 import inspector from "inspector";
-import { CompiledSmartContract, IExecutioner } from "@fever-tokens/diamond/ts-lib";
+import {
+  CompiledSmartContract,
+  IExecutioner,
+} from "@fever-tokens/diamond/ts-lib";
 
 const isDebugMode = inspector.url() !== undefined;
 
@@ -45,8 +48,6 @@ map(ZeroAddress, "@Zero");
 export function map(address: string, name: string): void {
   mapAddress.set(address, name);
 }
-
-
 
 const executionerContractMap = new Map<string, string>();
 export function executioner(
@@ -97,7 +98,6 @@ export function executioner(
     },
   };
 }
-
 
 let addressUsed = 0;
 
