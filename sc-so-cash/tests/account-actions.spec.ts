@@ -7,12 +7,13 @@ import {
   cleanStruct,
   ganacheProvider,
   getLogs,
+  setMochaTimeout,
 } from "@so-cash/sc-shared/utils";
 import { prepareContracts } from "./so-cash-prepare";
 import { createAccount, receipientInfo } from "@so-cash/sc-shared";
 
 describe("Test SoCash Accounts Functions", async function () {
-  this.timeout(10000);
+  setMochaTimeout(this, 10000);
   const web3 = new Web3(ganacheProvider() as any);
   let g: Awaited<ReturnType<typeof prepareContracts>> = {} as any;
 

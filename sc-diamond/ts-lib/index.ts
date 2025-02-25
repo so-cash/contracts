@@ -431,7 +431,7 @@ export class Diamond {
       // display the the facets and selectors names
       this.config.facetNames.forEach((name, index) => {
         console.log(
-          `Facet ${name} : ${this.internalCombined.names.get(name)?.fullName}`,
+          `Facet ${name} : ${this.internalCombined.names.get(name)?.fullName} at ${facetAddresses[name]}`,
         );
         diamondCut[index].selectors.forEach((selector) => {
           console.log(

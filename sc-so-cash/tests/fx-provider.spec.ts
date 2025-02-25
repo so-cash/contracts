@@ -34,7 +34,6 @@ import {
 } from "@so-cash/sc-shared";
 
 import socashContracts from "../build";
-import e from "express";
 import { SmartContractInstance } from "@saturn-chain/smart-contract";
 import { EthProviderInterface } from "@saturn-chain/dlt-tx-data-functions";
 

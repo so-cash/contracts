@@ -143,7 +143,7 @@ describe("Test SoCash HTLC Functions", async function () {
     console.log("htlcData", htlc1);
     await g.nostroBank1.lockFunds(
       g.bo1User.send(),
-      receipientInfo(),
+      receipientInfo(transitAccount.deployedAt), // the recipient is used for the transfer
       300_000,
       htlc1.timeout,
       htlc1.hash,
@@ -177,7 +177,7 @@ describe("Test SoCash HTLC Functions", async function () {
     await g.nostroBank1.transferLockedFunds(
       g.bo2User.send(),
       htlc2.id,
-      receipientInfo(transitAccount.deployedAt),
+      htlc2.recipient, // the recipient is the one of the lock
       htlc2.secret,
       "Redemption",
     );
@@ -216,13 +216,13 @@ describe("Test SoCash HTLC Functions", async function () {
     );
     // allow bank1 to operate its nostro
     await g.nostroBank1.whitelist(g.bo2User.send(), await g.bo1User.account());
-
+    const bic = await g.bank2.bic(g.bo2User.call());
     // Bank1 create secrets and all necessary elements
     const htlc1 = await createHTLCData();
     console.log("htlcData", htlc1);
     await g.nostroBank1.lockFunds(
       g.bo1User.send(),
-      receipientInfo(),
+      receipientInfo(undefined, bic, ""),
       300_000,
       htlc1.timeout,
       htlc1.hash,
@@ -253,11 +253,10 @@ describe("Test SoCash HTLC Functions", async function () {
     htlc2.secret = htlc1.secret;
     console.log("htlc2", htlc2);
     // Bank2 can now claim the funds to cover its payment
-    const bic = await g.bank2.bic(g.bo2User.call());
     await g.nostroBank1.transferLockedFunds(
       g.bo2User.send(),
       htlc2.id,
-      receipientInfo(undefined, bic, ""),
+      htlc2.recipient, // the recipient is the one of the lock
       htlc2.secret,
       "Redemption",
     );
@@ -291,7 +290,7 @@ describe("Test SoCash HTLC Functions", async function () {
     const htlc1 = await createHTLCData();
     await g.nostroBank1.lockFunds(
       g.bo1User.send(),
-      receipientInfo(),
+      receipientInfo(g.nostroBank1.deployedAt), // fake recipient because we want to cancel
       300_000,
       htlc1.timeout,
       htlc1.hash,
@@ -350,7 +349,7 @@ describe("Test SoCash HTLC Functions", async function () {
     );
     await account2.lockFunds(
       g.user2.send(),
-      receipientInfo(),
+      receipientInfo(account1.deployedAt),
       300_000,
       timeout,
       hash,
@@ -435,7 +434,7 @@ describe("Test SoCash HTLC Functions", async function () {
     const eurHTLC = await createHTLCData();
     await account1EUR.lockFunds(
       g.user1.send(),
-      receipientInfo(),
+      receipientInfo(account2EUR.deployedAt),
       300_000,
       eurHTLC.timeout,
       eurHTLC.hash,
@@ -461,7 +460,7 @@ describe("Test SoCash HTLC Functions", async function () {
     console.log("PvP Cash Lock", eurAmount, usdAmount, deadline);
     await account2USD.lockFunds(
       g.user2.send(),
-      receipientInfo(),
+      receipientInfo(account1USD.deployedAt),
       usdAmount,
       deadline,
       htlcEUR.htlc.hashlockPaid,
@@ -519,7 +518,7 @@ describe("Test SoCash HTLC Functions", async function () {
     const htlc1 = await createHTLCData();
     await g.nostroBank1.lockFunds(
       g.bo1User.send(),
-      receipientInfo(),
+      receipientInfo(g.nostroBank1.deployedAt), // fake recipient because we want to cancel
       300_000,
       htlc1.timeout,
       htlc1.hash,
@@ -565,7 +564,7 @@ describe("Test SoCash HTLC Functions", async function () {
     const htlc1 = await createHTLCData();
     await g.nostroBank1.lockFunds(
       g.bo1User.send(),
-      receipientInfo(),
+      receipientInfo(g.nostroBank2.deployedAt),
       300_000,
       htlc1.timeout,
       htlc1.hash,

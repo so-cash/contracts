@@ -19,7 +19,7 @@ The smart contract SoCashBank is relatively big and had to be split with librari
 - SharedFunctions: a library that provides utility functions
 - PaymentEngine: a library that provides business logic for payments and some IBAN decoding
 
-When using the `@saturn-chain/smart-contract` library, the deployment of the libraries is done automatically once but the deployed address is kept in memory only so at next restart of the program libraries will be redeployed. So keep this in a separarate storage if you want to reuse the lib accross executions. This can be achieved with an undocumented feature of the library : `(allContracts.get("LIBName") as any).deployedAt = "0x1234567890abcdef1234567890abcdef12345678";`
+When using the `@saturn-chain/smart-contract` library, the deployment of the libraries is done automatically once but the deployed address is kept in memory only so at next restart of the program libraries will be redeployed. So keep this in a separarate storage if you want to reuse the lib accross executions. This can be achieved with an undocumented feature of the library : `allContracts.get("LIBName").deployedAt = "0x1234567890abcdef1234567890abcdef12345678";`
 
 When deploying the bank module contract, the following parameters must be provided:
 - `address rootReferential`: the address of the root referential. 

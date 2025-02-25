@@ -104,6 +104,9 @@ contract AccountActions is ISoCashAccountActions, IERC20Base, ERC20BaseInternal,
         opaque,
         HTLCState.INITIATED
     );
+    // ensure the recipient is defined with something else the lock will never be properly unlocked
+    bool recipientDefined = recipient.account != ISoCashAccount(address(0)) || BIC.unwrap(recipient.bic) != 0 || IBAN.unwrap(recipient.iban) != 0;
+    require(recipientDefined, "SoC: recipient not defined");
     require(_bank().lockFunds(amount), "SoC: lockFunds failed");
     return key;
   }

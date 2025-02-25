@@ -3,12 +3,16 @@ import chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised);
 
 import Web3 from "web3";
-import { ganacheProvider, getLogs } from "@so-cash/sc-shared/utils";
+import {
+  ganacheProvider,
+  getLogs,
+  setMochaTimeout,
+} from "@so-cash/sc-shared/utils";
 import { prepareContracts } from "./so-cash-prepare";
 import { createAccount, getNewWallet } from "@so-cash/sc-shared";
 
 describe("Test SoCash Accounts ERC20 Compatibility", async function () {
-  this.timeout(10000);
+  setMochaTimeout(this, 10000);
   const web3 = new Web3(ganacheProvider() as any);
   let g: Awaited<ReturnType<typeof prepareContracts>> = {} as any;
 

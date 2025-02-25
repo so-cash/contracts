@@ -8,8 +8,6 @@ import {
   cleanStruct,
   ganacheProvider,
   getLogs,
-  map,
-  traceEventLog,
 } from "@so-cash/sc-shared/utils";
 import { prepareContracts } from "./so-cash-prepare";
 import { createAccount, receipientInfo } from "@so-cash/sc-shared";

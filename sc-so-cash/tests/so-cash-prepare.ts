@@ -20,6 +20,8 @@ import {
   extractErrorMessage,
   ZeroAddress,
   setSoCashCombinedJson,
+  createRootReferential,
+  createCountryReferential,
 } from "@so-cash/sc-shared";
 import {
   EventReceiver,
@@ -45,15 +47,17 @@ export function unsubscribeAll() {
 
 export function initContractCompilation(resetLibs: boolean = true) {
   // check all contracts are present
+  checkContractCompilation(allContracts, contractsNames.cashdiamond);
   checkContractCompilation(allContracts, contractsNames.cash);
+  checkContractCompilation(referentialContracts, contractsNames.refdiamond);
   checkContractCompilation(referentialContracts, contractsNames.ref);
   // force remove the deployed Lib address to force the redeployment of the library
   // This is because the library address is stored in the lib memory,
   // but since we create a new ganache chain for each test group, the address is not valid anymore
   if (resetLibs) {
-    (allContracts.get("IBANCalculator") as any).deployedAt = undefined;
-    (allContracts.get("SharedFunctions") as any).deployedAt = undefined;
-    (allContracts.get("PaymentEngine") as any).deployedAt = undefined;
+    allContracts.get("IBANCalculator").deployedAt = undefined;
+    allContracts.get("SharedFunctions").deployedAt = undefined;
+    allContracts.get("PaymentEngine").deployedAt = undefined;
   }
 }
 
@@ -62,18 +66,19 @@ export async function declareReferentials(
   sub: boolean,
   ...countries: string[]
 ) {
-  const rootRef = referentialContracts.get(contractsNames.ref.root);
-  const countryRef = referentialContracts.get(contractsNames.ref.country);
+  // const rootRef = referentialContracts.get(contractsNames.ref.root);
+  // const countryRef = referentialContracts.get(contractsNames.ref.country);
   const rootUser = await getNewWallet(web3, "rootUser", true);
 
-  const root = await rootRef.deploy(rootUser.newi());
+  const root = await createRootReferential(referentialContracts, rootUser);
   map(root.deployedAt, "RootRef");
 
   const countryRefs: { [key: string]: SmartContractInstance }[] = [];
   for (const country of countries) {
-    const countryInst = await countryRef.deploy(
-      rootUser.newi(),
-      Buffer.from(country),
+    const countryInst = await createCountryReferential(
+      referentialContracts,
+      rootUser,
+      country,
     );
     map(countryInst.deployedAt, "Country" + country);
     if (sub)
@@ -273,22 +278,24 @@ export async function prepareContracts(
   subs: boolean = true,
 ) {
   // check all contracts are present
+  checkContractCompilation(allContracts, contractsNames.cashdiamond);
   checkContractCompilation(allContracts, contractsNames.cash);
+  checkContractCompilation(referentialContracts, contractsNames.refdiamond);
   checkContractCompilation(referentialContracts, contractsNames.ref);
   // force remove the deployed Lib address to force the redeployment of the library
   // This is because the library address is stored in the lib memory,
   // but since we create a new ganache chain for each test group, the address is not valid anymore
-  (allContracts.get("IBANCalculator") as any).deployedAt = undefined;
-  (allContracts.get("SharedFunctions") as any).deployedAt = undefined;
-  (allContracts.get("PaymentEngine") as any).deployedAt = undefined;
+  allContracts.get("IBANCalculator").deployedAt = undefined;
+  allContracts.get("SharedFunctions").deployedAt = undefined;
+  allContracts.get("PaymentEngine").deployedAt = undefined;
 
   console.log(
     "List libs for Bank",
     listLibraries(allContracts, contractsNames.cash.bank),
   );
 
-  const rootRef = referentialContracts.get(contractsNames.ref.root);
-  const countryRef = referentialContracts.get(contractsNames.ref.country);
+  // const rootRef = referentialContracts.get(contractsNames.ref.root);
+  // const countryRef = referentialContracts.get(contractsNames.ref.country);
 
   const bankContract = allContracts.get(contractsNames.cash.bank);
   const accountContract = allContracts.get(
@@ -317,9 +324,13 @@ export async function prepareContracts(
 
   // deploy the contracts
 
-  const root = await rootRef.deploy(rootUser.newi());
+  const root = await createRootReferential(referentialContracts, rootUser);
   map(root.deployedAt, "RootRef");
-  const countryFR = await countryRef.deploy(rootUser.newi(), Buffer.from("FR"));
+  const countryFR = await createCountryReferential(
+    referentialContracts,
+    rootUser,
+    "FR",
+  );
   map(countryFR.deployedAt, "CountryFR");
   await root.setCountry(rootUser.send(), countryFR.deployedAt);
   if (subs)
@@ -569,14 +580,16 @@ export async function prepareMultyCcyContracts(
   subs: boolean = true,
 ) {
   // check all contracts are present
+  checkContractCompilation(allContracts, contractsNames.cashdiamond);
+  checkContractCompilation(referentialContracts, contractsNames.refdiamond);
   checkContractCompilation(allContracts, contractsNames.cash);
   checkContractCompilation(referentialContracts, contractsNames.ref);
   // force remove the deployed Lib address to force the redeployment of the library
   // This is because the library address is stored in the lib memory,
   // but since we create a new ganache chain for each test group, the address is not valid anymore
-  (allContracts.get("IBANCalculator") as any).deployedAt = undefined;
-  (allContracts.get("SharedFunctions") as any).deployedAt = undefined;
-  (allContracts.get("PaymentEngine") as any).deployedAt = undefined;
+  allContracts.get("IBANCalculator").deployedAt = undefined;
+  allContracts.get("SharedFunctions").deployedAt = undefined;
+  allContracts.get("PaymentEngine").deployedAt = undefined;
 
   const rootRef = referentialContracts.get(contractsNames.ref.root);
   const countryRef = referentialContracts.get(contractsNames.ref.country);
@@ -749,7 +762,7 @@ export async function simulateEndToEndTransfer(
     if (plan.payFromNostro != ZeroAccount) {
       // we have to simulate the payment from this account to the recipient
       const nostroInstance = allContracts
-        .get(contractsNames.cash.account)
+        .get(contractsNames.cashdiamond.account.intf)
         .at(plan.payFromNostro);
       const nostroBankAddress = await nostroInstance.bank(
         fromBank.boUser.call(),
@@ -771,7 +784,7 @@ export async function simulateEndToEndTransfer(
       // we have a transfer between this account and the payToAccount to simulate
       if (plan.payViaAccount.model == BankModel.SO_CASH) {
         const viaAccount = allContracts
-          .get(contractsNames.cash.account)
+          .get(contractsNames.cashdiamond.account.intf)
           .at(plan.payViaAccount.account);
         const viaAccountBank: Awaited<ReturnType<typeof declareBank>> = {
           ...fromBank,

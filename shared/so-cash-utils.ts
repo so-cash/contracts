@@ -106,6 +106,58 @@ function getSoCashContracts() {
   return __smartContractsLoaded;
 }
 
+export async function createRootReferential(
+  contracts: SmartContracts,
+  owner: EthProviderInterface,
+): Promise<SmartContractInstance> {
+  const rootContract = contracts.get(contractsNames.refdiamond.root.intf);
+  const rootDiamond = new Diamond(
+    {
+      combinedJson: contracts.combined,
+      rootName: contractsNames.refdiamond.root.base,
+      readableName: contractsNames.refdiamond.root.readable,
+      writableName: contractsNames.refdiamond.root.writable,
+      facetNames: [
+        contractsNames.refdiamond.root.finder,
+        contractsNames.refdiamond.root.countryManager,
+      ],
+      initializeFunctionName: "initialize",
+      initializeFunctionArgs: [],
+    },
+    executioner(contracts, owner),
+  );
+  const rootDeployed = await rootDiamond.deploy();
+  const root = rootContract.at(rootDeployed.rootAddress);
+  return root;
+}
+
+export async function createCountryReferential(
+  contracts: SmartContracts,
+  owner: EthProviderInterface,
+  country: string,
+): Promise<SmartContractInstance> {
+  const countryContract = contracts.get(contractsNames.refdiamond.country.intf);
+  const countryDiamond = new Diamond(
+    {
+      combinedJson: contracts.combined,
+      rootName: contractsNames.refdiamond.country.base,
+      readableName: contractsNames.refdiamond.country.readable,
+      writableName: contractsNames.refdiamond.country.writable,
+      facetNames: [
+        contractsNames.oppenzeppelin.ownable,
+        contractsNames.refdiamond.country.bankController,
+        contractsNames.refdiamond.country.countryState,
+      ],
+      initializeFunctionName: "initialize",
+      initializeFunctionArgs: [Buffer.from(country.slice(0, 2))],
+    },
+    executioner(contracts, owner),
+  );
+  const countryDeployed = await countryDiamond.deploy();
+  const countryInstance = countryContract.at(countryDeployed.rootAddress);
+  return countryInstance;
+}
+
 export async function createAccount(
   name: string,
   inBank: SmartContractInstance,

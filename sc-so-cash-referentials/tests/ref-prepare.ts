@@ -6,17 +6,11 @@ import {
   map,
   traceEventLog,
   contractsNames,
-  createAccount,
   getNewWallet,
   checkContractCompilation,
-  executioner,
+  createRootReferential,
+  createCountryReferential,
 } from "@so-cash/sc-shared";
-
-import {
-  CombinedFile,
-  Diamond,
-  DiamondCreateConfig,
-} from "@fever-tokens/diamond/ts-lib";
 
 export async function prepareContracts(web3: Web3, subs: boolean = true) {
   // check all contracts are present
@@ -44,62 +38,21 @@ export async function prepareContracts(web3: Web3, subs: boolean = true) {
   if (CountrySub) CountrySub.on("log", traceEventLog("COUNTRY"));
 
   // deploy the root referential
-  // const root = await rootContract.deploy(adminUser.newi());
-  const rootDiamond = new Diamond(
-    {
-      combinedJson: refCombined as CombinedFile,
-      rootName: contractsNames.refdiamond.root.base,
-      readableName: contractsNames.refdiamond.root.readable,
-      writableName: contractsNames.refdiamond.root.writable,
-      facetNames: [
-        contractsNames.refdiamond.root.finder,
-        contractsNames.refdiamond.root.countryManager,
-      ],
-      initializeFunctionName: "initialize",
-      initializeFunctionArgs: [],
-    },
-    executioner(refContracts, adminUser),
-  );
-  const rootDeployed = await rootDiamond.deploy();
-  const root = rootContract.at(rootDeployed.rootAddress);
 
-  const countryConfig: DiamondCreateConfig = {
-    combinedJson: refCombined as CombinedFile,
-    rootName: contractsNames.refdiamond.country.base,
-    readableName: contractsNames.refdiamond.country.readable,
-    writableName: contractsNames.refdiamond.country.writable,
-    facetNames: [
-      contractsNames.oppenzeppelin.ownable,
-      contractsNames.refdiamond.country.bankController,
-      contractsNames.refdiamond.country.countryState,
-    ],
-    initializeFunctionName: "initialize",
-    initializeFunctionArgs: [], // To be fixed by country
-  };
+  const root = await createRootReferential(refContracts, adminUser);
 
   // deploy FR and US country referentials
-  // const countryFR = await countryContract.deploy(
-  //   adminFRUser.newi(),
-  //   Buffer.from("FR"),
-  // );
-  let countryDiamond = new Diamond(
-    { ...countryConfig, initializeFunctionArgs: [Buffer.from("FR")] },
-    executioner(refContracts, adminFRUser),
+  const countryFR = await createCountryReferential(
+    refContracts,
+    adminFRUser,
+    "FR",
   );
-  const countryFRDeployed = await countryDiamond.deploy();
-  const countryFR = countryContract.at(countryFRDeployed.rootAddress);
   map(countryFR.deployedAt, "CountryFR");
-  // const countryUS = await countryContract.deploy(
-  //   adminUSUser.newi(),
-  //   Buffer.from("US"),
-  // );
-
-  countryDiamond = new Diamond(
-    { ...countryConfig, initializeFunctionArgs: [Buffer.from("US")] },
-    executioner(refContracts, adminUSUser),
+  const countryUS = await createCountryReferential(
+    refContracts,
+    adminUSUser,
+    "US",
   );
-  const countryUSDeployed = await countryDiamond.deploy();
-  const countryUS = countryContract.at(countryUSDeployed.rootAddress);
   map(countryUS.deployedAt, "CountryUS");
 
   // register the country referentials to the root

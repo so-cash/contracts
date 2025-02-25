@@ -32,7 +32,8 @@ export function setMochaTimeout(mocha: Mocha.Suite, timeout: number) {
 export const blockGasLimit = 80_000_000;
 // export const GanacheOptions : ProviderOptions = { default_balance_ether: 1000, gasLimit: blockGasLimit, chain: {vmErrorsOnRPCResponse:true, allowUnlimitedInitCodeSize: true, allowUnlimitedContractSize: true}, logging: {quiet:true} };
 export function ganacheProvider() {
-  return Ganache.provider({
+  // since we provide a new blockchain, the saved addresses in the cache need to be forgotten
+  const provider = Ganache.provider({
     wallet: { defaultBalance: 1000 },
     miner: { blockGasLimit: blockGasLimit },
     chain: {
@@ -42,18 +43,23 @@ export function ganacheProvider() {
     },
     logging: { quiet: true, debug: true, verbose: false },
   });
+  // create a memory cache object to keep data alongside the ganache blockchain
+  (provider as any)._chainCache = new Map<string, any>();
+  return provider;
 }
 const mapAddress = new Map<string, string>();
 map(ZeroAddress, "@Zero");
 export function map(address: string, name: string): void {
   mapAddress.set(address, name);
 }
-
-const executionerContractMap = new Map<string, string>();
 export function executioner(
   contracts: SmartContracts,
   wallet: Awaited<ReturnType<typeof getNewWallet>>,
 ): IExecutioner {
+  // get and set the facet cache from the wallet provider so the cache is managed by chain not globally in the module
+  const executionerContractMap: Map<string, string> =
+    (wallet as DLTInterfaceEx).chainCache.get("facets") || new Map();
+  (wallet as DLTInterfaceEx).chainCache.set("facets", executionerContractMap);
   return {
     deployer: async (
       name: string,
@@ -202,8 +208,17 @@ export async function getLogs(ev: EventReceiver): Promise<EventData[]> {
 
 /** Create a EthProviderInterface that forces the testing of the gas and handle errors as best as possible */
 export class DLTInterfaceEx extends Web3FunctionProvider {
+  protected _provider: any;
   constructor(provider: any, address: string) {
     super(provider, () => Promise.resolve(address));
+    this._provider = provider;
+  }
+
+  get chainCache(): Map<string, any> {
+    return this._provider._chainCache || new Map();
+  }
+  get provider() {
+    return this._provider;
   }
 
   send(options: SendOptions = { maxGas: 5_000_000 }): CallSendFunction {
@@ -254,15 +269,17 @@ export class DLTInterfaceEx extends Web3FunctionProvider {
         const slicing = bytecode.startsWith("0x") ? 2 : 0;
         const code = Buffer.from(bytecode.slice(slicing), "hex");
         gas += 200 * code.length; // add a gas for the code size
-        console.log(
-          "Final Deployed with gas: " + gas,
-          code.length,
-          code.length * 200,
-          ": " + name,
-        );
 
         const newi = super_newi({ ...options, maxGas: gas });
-        return await newi(name, bytecode);
+        const address = await newi(name, bytecode);
+        console.log(
+          "Contract deployed:",
+          address,
+          "gas: " + gas,
+          "class:",
+          name,
+        );
+        return address;
       } catch (error) {
         throw new Error("DLT deploy failed: " + (error as Error).message);
       }
