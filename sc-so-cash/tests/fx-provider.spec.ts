@@ -128,6 +128,8 @@ describe("Test SoCash FX Provider", async function () {
     duration: number = 60,
   ) {
     const blockTs = await blockTimestamp();
+    console.log(`blockTs for price: ${blockTs}`, "duration", duration);
+
     const fxRate = {
       rate: price * 10_000,
       rateTime: blockTs,
@@ -252,7 +254,7 @@ describe("Test SoCash FX Provider", async function () {
       "EUR",
       "USD",
       1.1,
-      120, // 2 minutes because when all tests are run in // there is a time gap that makes it fails
+      120_00, // 200 minutes because when all tests are run in // there is a time gap that makes it fails
     );
 
     // Client allows the FX Provider to debit its account
@@ -271,6 +273,12 @@ describe("Test SoCash FX Provider", async function () {
       fxRate,
       signature,
       "FX operation",
+    );
+    console.log(
+      "last block timestamp",
+      await blockTimestamp(),
+      "rate expiry:",
+      fxRate.expiryTime,
     );
   });
 });
