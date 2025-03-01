@@ -2,7 +2,10 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20} from "@fever-tokens/diamond/src/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@fever-tokens/diamond/src/token/ERC20/extensions/IERC20Metadata.sol";
+
+// import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "../intf/whitelisted-senders.sol";
 import "../intf/htlc-payment.sol";
 import "../utilities/whitelisted-senders.sol";
@@ -39,7 +42,7 @@ interface ISoCashAccountActions  {
   function unlockFunds(bytes32 key, string calldata secret) external returns (bool);
 }
 
-interface ISoCashOwnedAccount is ISoCashAccountActions, ISoCashAccount, ISoCashAccountData, IERC20Metadata {
+interface ISoCashOwnedAccount is ISoCashAccountActions, ISoCashAccount, ISoCashAccountData, IERC20, IERC20Metadata {
 
 }
 

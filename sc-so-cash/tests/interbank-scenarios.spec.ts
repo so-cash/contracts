@@ -38,6 +38,18 @@ describe("SoCash Interbank scenarios", async function () {
     unsubscribeAll();
   });
 
+  it("One bank standalone to control the deployment", async () => {
+    const bank1 = await declareBank(
+      web3,
+      ref,
+      "AGRIFRPP",
+      bankIdentifier("FR", ["10000", "11111"]),
+      "EUR",
+      2,
+      true,
+    );
+  });
+
   it("Two bank setup with reciprocal correspondent nostro accounts", async () => {
     // create two banks
     const bank1 = await declareBank(

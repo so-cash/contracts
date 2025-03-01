@@ -19,4 +19,14 @@ library ERC20MetadataStorage {
             l.slot := slot
         }
     }
+
+    function __init(
+        string memory name,
+        string memory symbol,
+        uint8 decimals) internal {
+        Layout storage l = layout();
+        l.name = name;
+        l.symbol = symbol;
+        l.decimals = decimals;
+    }  
 }

@@ -22,6 +22,7 @@ import {
   setSoCashCombinedJson,
   createRootReferential,
   createCountryReferential,
+  createBankModule,
 } from "@so-cash/sc-shared";
 import {
   EventReceiver,
@@ -110,14 +111,23 @@ export async function declareBank(
   sub: boolean = true,
 ) {
   const boUser = await getNewWallet(web3, "BankWallet" + bic);
-  const bankContract = allContracts.get(contractsNames.cash.bank);
-  // deploy the new bank module (will deploy the libs the first time)
-  const bank = await bankContract.deploy(
-    boUser.newi(),
-    ref.root.deployedAt,
-    Buffer.from(bic),
+  // const bankContract = allContracts.get(contractsNames.cash.bank);
+  // // deploy the new bank module (will deploy the libs the first time)
+  // const bank = await bankContract.deploy(
+  //   boUser.newi(),
+  //   ref.root.deployedAt,
+  //   Buffer.from(bic),
+  //   id,
+  //   Buffer.from(ccy),
+  //   decimals,
+  // );
+  const bank = await createBankModule(
+    allContracts,
+    boUser,
+    ref.root,
+    bic,
     id,
-    Buffer.from(ccy),
+    ccy,
     decimals,
   );
   map(bank.deployedAt, "Bank:" + bic + "." + ccy);
@@ -335,24 +345,41 @@ export async function prepareContracts(
   await root.setCountry(rootUser.send(), countryFR.deployedAt);
   if (subs)
     countryFR.allEvents(rootUser.sub(), {}).on("log", traceEventLog("RefFR"));
-
-  const bank1 = await bankContract.deploy(
-    bo1User.newi(),
-    root.deployedAt,
-    Buffer.from("AGRIFRPPXXX"),
+  // const bank1 = await bankContract.deploy(
+  //   bo1User.newi(),
+  //   root.deployedAt,
+  //   Buffer.from("AGRIFRPP"),
+  //   bankIdentifier("FR", ["30002", "05728"]),
+  //   Buffer.from(ccy),
+  //   2,
+  // );
+  const bank1 = await createBankModule(
+    allContracts,
+    bo1User,
+    root,
+    "AGRIFRPPXXX",
     bankIdentifier("FR", ["30002", "05728"]),
-    Buffer.from(ccy),
+    ccy,
     2,
   );
   map(bank1.deployedAt, "Bank1" + ccy);
-  const bank2 = await bankContract.deploy(
-    bo2User.newi(),
-    root.deployedAt,
-    Buffer.from("SGXXFRPPXXX"),
+  const bank2 = await createBankModule(
+    allContracts,
+    bo2User,
+    root,
+    "SGXXFRPPXXX",
     bankIdentifier("FR", ["40000", "99999"]),
-    Buffer.from(ccy),
+    ccy,
     2,
   );
+  // const bank2 = await bankContract.deploy(
+  //   bo2User.newi(),
+  //   root.deployedAt,
+  //   Buffer.from("SGXXFRPPXXX"),
+  //   bankIdentifier("FR", ["40000", "99999"]),
+  //   Buffer.from(ccy),
+  //   2,
+  // );
   map(bank2.deployedAt, "Bank2" + ccy);
 
   // Add the Referential
@@ -491,14 +518,23 @@ export async function addThirdbankContract(
     "",
   );
   const bo3User = await getNewWallet(web3, "bankWallet3");
-  const bank3 = await g.bankContract.deploy(
-    bo3User.newi(),
-    g.root.deployedAt,
-    Buffer.from("ABCXFRPPXXX"),
+  const bank3 = await createBankModule(
+    allContracts,
+    bo3User,
+    g.root,
+    "ABCXFRPPXXX",
     bankIdentifier("FR", ["50000", "88888"]),
-    Buffer.from(ccy),
+    ccy,
     2,
   );
+  // const bank3 = await g.bankContract.deploy(
+  //   bo3User.newi(),
+  //   g.root.deployedAt,
+  //   Buffer.from("ABCXFRPPXXX"),
+  //   bankIdentifier("FR", ["50000", "88888"]),
+  //   Buffer.from(ccy),
+  //   2,
+  // );
   map(bank3.deployedAt, "Bank3" + ccy);
   // await bank3.setRouterReferential(bo3User.send(), g.root.deployedAt);
   const bank3Id = await bank3.bankIdentifier(bo3User.call());
@@ -627,24 +663,42 @@ export async function prepareMultyCcyContracts(
   if (subs)
     countryFR.allEvents(rootUser.sub(), {}).on("log", traceEventLog("RefFR"));
 
-  const bankCcy1 = await bankContract.deploy(
-    bo1User.newi(),
-    root.deployedAt,
-    Buffer.from("AGRIFRPP"),
+  const bankCcy1 = await createBankModule(
+    allContracts,
+    bo1User,
+    root,
+    "AGRIFRPP",
     bankIdentifier("FR", ["30002", "05728"]),
-    Buffer.from(ccy1),
+    ccy1,
     2,
   );
+  // const bankCcy1 = await bankContract.deploy(
+  //   bo1User.newi(),
+  //   root.deployedAt,
+  //   Buffer.from("AGRIFRPP"),
+  //   bankIdentifier("FR", ["30002", "05728"]),
+  //   Buffer.from(ccy1),
+  //   2,
+  // );
   map(bankCcy1.deployedAt, "Bank" + ccy1);
 
-  const bankCcy2 = await bankContract.deploy(
-    bo1User.newi(),
-    root.deployedAt,
-    Buffer.from("AGRIFRPP"),
+  const bankCcy2 = await createBankModule(
+    allContracts,
+    bo1User,
+    root,
+    "AGRIFRPP",
     bankIdentifier("FR", ["30002", "05728"]),
-    Buffer.from(ccy2),
+    ccy2,
     2,
   );
+  // const bankCcy2 = await bankContract.deploy(
+  //   bo1User.newi(),
+  //   root.deployedAt,
+  //   Buffer.from("AGRIFRPP"),
+  //   bankIdentifier("FR", ["30002", "05728"]),
+  //   Buffer.from(ccy2),
+  //   2,
+  // );
   map(bankCcy2.deployedAt, "Bank" + ccy2);
 
   // Add the Referential

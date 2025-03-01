@@ -31,6 +31,21 @@ export const contractsNames = {
       htlc: "HTLCPayment",
       actions: "AccountActions",
     },
+    bank: {
+      intf: "ISoCashBankFull",
+      base: "SoCashBankDiamond",
+      readable: "SoCashBankDiamondReadable",
+      writable: "SoCashBankDiamondWritable",
+      // facets
+      identity: "BankIdentity",
+      whitelist: "WhitelistedSenders",
+      boService: "BankBackOfficeServices",
+      extService: "BankExternalServices",
+      boPayment: "BankBOPayment",
+      extPayment: "BankExtPayment",
+      iban: "IBANServiceFacet",
+      simulation: "BankPaymentSimulation",
+    },
   },
   amm: {
     amm: "CPAMM",
@@ -156,6 +171,49 @@ export async function createCountryReferential(
   const countryDeployed = await countryDiamond.deploy();
   const countryInstance = countryContract.at(countryDeployed.rootAddress);
   return countryInstance;
+}
+
+export async function createBankModule(
+  contracts: SmartContracts,
+  owner: EthProviderInterface,
+  ref: SmartContractInstance, // the global referential instance
+  bic: string,
+  id: ReturnType<typeof bankIdentifier>,
+  ccy: string,
+  decimals: number,
+): Promise<SmartContractInstance> {
+  const bankContract = contracts.get(contractsNames.cashdiamond.bank.intf);
+  const bankDiamond = new Diamond(
+    {
+      combinedJson: contracts.combined,
+      rootName: contractsNames.cashdiamond.bank.base,
+      readableName: contractsNames.cashdiamond.bank.readable,
+      writableName: contractsNames.cashdiamond.bank.writable,
+      facetNames: [
+        contractsNames.oppenzeppelin.ownable,
+        // contractsNames.cashdiamond.bank.identity,
+        // contractsNames.cashdiamond.bank.iban,
+        contractsNames.cashdiamond.bank.extService, // already has identity and iban
+        contractsNames.cashdiamond.bank.whitelist,
+        contractsNames.cashdiamond.bank.boService,
+        contractsNames.cashdiamond.bank.boPayment,
+        contractsNames.cashdiamond.bank.extPayment,
+        contractsNames.cashdiamond.bank.simulation,
+      ],
+      initializeFunctionName: "initialize",
+      initializeFunctionArgs: [
+        ref.deployedAt,
+        Buffer.from(bic),
+        id,
+        Buffer.from(ccy),
+        decimals,
+      ],
+    },
+    executioner(contracts, owner),
+  );
+  const bankDeployed = await bankDiamond.deploy();
+  const bankInstance = bankContract.at(bankDeployed.rootAddress);
+  return bankInstance;
 }
 
 export async function createAccount(

@@ -6,7 +6,7 @@ import "../intf/so-cash-bank.sol";
 import "../intf/so-cash-account.sol";
 import "../utilities/whitelisted-senders.sol";
 import "./payment-engine.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+// import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ISoCashGlobalReferential, ISoCashCountryReferential, BankIdentifier, CodeType} from "@so-cash/sc-so-cash-ref/src/intf/so-cash-referential.sol";
 
 import "../utilities/IBAN.sol";
@@ -573,12 +573,12 @@ contract SoCashBank is ISoCashBank, ISoCashBankBackOffice, ISoCashBankExternal, 
           if (plan.payViaAccount.account == address(this)) {
             // require(false, "debug: payviaaccount is this bank");
             // Here the source account is this smart contract so we can call transfer directly
-            success = success && IERC20Metadata(plan.payViaAccount.bank).transfer(plan.payToAccount.account, ti.amount);
+            success = success && IERC20(plan.payViaAccount.bank).transfer(plan.payToAccount.account, ti.amount);
             controlConsistency++; // we have debited our ERC20 nostro, so reduced our asset, so like increase our liability
           } else {
             // require(false, "debug: payviaaccount is not this bank");
             // Here the source account is another address that should have approved this contract to transfer on its behalf
-            success = success && IERC20Metadata(plan.payViaAccount.bank).transferFrom(plan.payViaAccount.account, plan.payToAccount.account, ti.amount);
+            success = success && IERC20(plan.payViaAccount.bank).transferFrom(plan.payViaAccount.account, plan.payToAccount.account, ti.amount);
             controlConsistency++; // we have debited our nostro, so reduced our asset, so like increase our liability
           }
         }

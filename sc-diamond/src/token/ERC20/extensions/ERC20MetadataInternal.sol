@@ -23,11 +23,7 @@ abstract contract ERC20MetadataInternal is IERC20MetadataInternal {
         string calldata symbol_,
         uint8 decimals_
     ) internal {
-        ERC20MetadataStorage.Layout storage l = ERC20MetadataStorage.layout();
-
-        l.name = name_;
-        l.symbol = symbol_;
-        l.decimals = decimals_;
+        ERC20MetadataStorage.__init(name_, symbol_, decimals_);
     }
 
     /**

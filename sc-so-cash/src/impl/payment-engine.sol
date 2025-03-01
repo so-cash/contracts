@@ -3,7 +3,7 @@
 pragma solidity 0.8.17;
 
 
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+// import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "../intf/so-cash-types.sol";
 import "../intf/so-cash-account.sol";
 import "../intf/so-cash-bank.sol";
@@ -76,7 +76,7 @@ library PaymentEngine {
     if (model == BankModel.SO_CASH) {
       actual = ISoCashBankExternal(bank).fullBalanceOf(ISoCashAccount(account));
     } else if (model == BankModel.ERC20) {
-      actual = int256(IERC20Metadata(bank).balanceOf(account));
+      actual = int256(IERC20(bank).balanceOf(account));
     } else {
       actual = 0;
     }

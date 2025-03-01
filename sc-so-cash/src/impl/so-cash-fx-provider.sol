@@ -6,7 +6,7 @@ import "../intf/so-cash-bank.sol";
 import "../intf/so-cash-account.sol";
 import "../utilities/whitelisted-senders.sol";
 import "./payment-engine.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+// import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ISoCashGlobalReferential, ISoCashCountryReferential, BankIdentifier, CodeType} from "@so-cash/sc-so-cash-ref/src/intf/so-cash-referential.sol";
 
 import "../utilities/shared-lib.sol";

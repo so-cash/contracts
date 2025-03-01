@@ -96,7 +96,7 @@ describe("Test SoCash FX Provider", async function () {
     const fxRate = {
       rate: 1.1 * 10_000,
       rateTime: blockTs,
-      expiryTime: blockTs + 10, // 10 seconds later
+      expiryTime: blockTs + 60, // 10 seconds later
       base: toBuffer("EUR"),
       quote: toBuffer("USD"),
     };
@@ -125,7 +125,7 @@ describe("Test SoCash FX Provider", async function () {
     base: string,
     quote: string,
     price: number,
-    duration: number = 30,
+    duration: number = 60,
   ) {
     const blockTs = await blockTimestamp();
     const fxRate = {

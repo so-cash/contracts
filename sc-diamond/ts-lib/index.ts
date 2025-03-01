@@ -377,20 +377,43 @@ export class Diamond {
     return bestName;
   }
 
+  protected async deployFacets(facetNames: string[], isUpgrade = false) {
+    const facetAddresses: { [name: string]: string } = {};
+    const deployments = await Promise.all(
+      facetNames.map(async (name) => {
+        const contract = this.getContract(name);
+        const addr = await this.executioner.deployer(name, contract, {
+          isFacet: true,
+          isUpgrade,
+        });
+        return [name, addr] as [string, string];
+      }),
+    );
+    deployments.forEach(([name, addr]) => {
+      facetAddresses[name] = addr;
+    });
+    return facetAddresses;
+  }
+
   async deploy(debug?: boolean): Promise<DeployedDiamond> {
     // start by deploying the facets, readable and writable facets
-    const facetAddresses: { [name: string]: string } = {};
-    for (const name of [
+    // const facetAddresses: { [name: string]: string } = {};
+    // for (const name of [
+    //   ...this.config.facetNames,
+    //   this.config.readableName,
+    //   this.config.writableName,
+    // ]) {
+    //   const contract = this.getContract(name);
+    //   // no parameters expected
+    //   facetAddresses[name] = await this.executioner.deployer(name, contract, {
+    //     isFacet: true,
+    //   });
+    // }
+    const facetAddresses = await this.deployFacets([
       ...this.config.facetNames,
       this.config.readableName,
       this.config.writableName,
-    ]) {
-      const contract = this.getContract(name);
-      // no parameters expected
-      facetAddresses[name] = await this.executioner.deployer(name, contract, {
-        isFacet: true,
-      });
-    }
+    ]);
     // deploy the root contract
     const rootContract = this.getContract(this.config.rootName);
 
@@ -470,18 +493,19 @@ export class Diamond {
       ({ facet }) => this._deployedAt!.facetAddresses[facet],
     );
     const newFacets = replace.map(({ withFacet }) => withFacet);
-    const newFacetAddresses: { [name: string]: string } = {};
+    // const newFacetAddresses: { [name: string]: string } = {};
     const newFacetFunctions: FacetFunctionWithTarget[] = [];
 
     // start by deploying the new facets
+    const newFacetAddresses = await this.deployFacets(newFacets, true);
     for (const name of newFacets) {
-      const contract = this.getContract(name);
-      // no parameters expected, deploy
-      newFacetAddresses[name] = await this.executioner.deployer(
-        name,
-        contract,
-        { isFacet: true, isUpgrade: true },
-      );
+      // const contract = this.getContract(name);
+      // // no parameters expected, deploy
+      // newFacetAddresses[name] = await this.executioner.deployer(
+      //   name,
+      //   contract,
+      //   { isFacet: true, isUpgrade: true },
+      // );
       // get the list of selectors of the new facet
       newFacetFunctions.push(
         ...this.internalCombined.contractSelectors
