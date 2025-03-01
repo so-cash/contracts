@@ -32,7 +32,8 @@ then
 
   echo "- Verify compilation and script by displaying the loaded contracts"
   # node -e 'console.log("  > "+require("./build/index.js").names().join("\n  > "))'
-  node -e 'import("./build/index.js").then(sc=>sc.default.names().forEach(c=>console.log(`  > ${c}: ${sc.default.get(c).bytecode.length / 2} bytes`, sc.default.get(c).bytecode.length/2>26000?`[WARNING: ${c} is too big!]`:"")))'
+  node --no-warnings -e 'import("./build/index.js").then(sc=>sc.default.contracts.filter(c=>c.runtime.length==0).sort((a,b)=>a.name.localeCompare(b.name)).forEach(c=>console.log(`  > ${c.name[0]=="I"?"I":"A"}`, `    - `, `${c.name}`.padEnd(40, " "), c.file )))'
+  node --no-warnings -e 'import("./build/index.js").then(sc=>sc.default.contracts.filter(c=>c.runtime.length>0).sort((a,b)=>a.name.localeCompare(b.name)).forEach(c=>console.log(`  > C`, `${c.runtime.length / 2}`.padStart(6, " "),`${c.name}`.padEnd(40, " "), c.runtime.length/2>24576?`\x1b[38;5;208m[WARNING: runtime is too big!]\x1b[0m`:"", c.file)))'
 else
   echo "Compilation failed"
   exit 1
