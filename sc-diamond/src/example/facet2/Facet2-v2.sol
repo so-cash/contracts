@@ -5,7 +5,6 @@ pragma solidity ^0.8.17;
 
 import {IFacet2V2} from "./IFacet2-v2.sol";
 import {Facet2Internal} from "./Facet2Internal.sol";
-
 // contract used to test the upgrade of a Facet2
 // it removes the inc() and adds the increment() function
 contract Facet2V2 is Facet2Internal, IFacet2V2 {

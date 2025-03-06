@@ -133,4 +133,8 @@ contract CountryStateManagement is ISoCashCountryStateManagement, BankController
     CountryStateStorage.Layout storage l = CountryStateStorage.layout();
     return l.SSIs[_index(codes)][currency];
   }
+
+  // function addition() external pure returns (uint) {
+  //   return 1;
+  // }
 }

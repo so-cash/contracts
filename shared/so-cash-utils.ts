@@ -46,6 +46,15 @@ export const contractsNames = {
       iban: "IBANServiceFacet",
       simulation: "BankPaymentSimulation",
     },
+    fxprovider: {
+      intf: "ISoCashFXProviderFull",
+      base: "SoCashFXProviderDiamond",
+      readable: "SoCashFXProviderDiamondReadable",
+      writable: "SoCashFXProviderDiamondWritable",
+      identity: "BankIdentity",
+      whitelist: "WhitelistedSenders",
+      fxprovider: "FXProvider",
+    },
   },
   amm: {
     amm: "CPAMM",
@@ -260,6 +269,37 @@ export async function createAccount(
     await account.whitelist(owner.send(), forBank.deployedAt);
   }
   return account;
+}
+
+export async function createFXProvider(
+  contracts: SmartContracts,
+  owner: EthProviderInterface,
+  ref: SmartContractInstance, // the global referential instance
+  bic: string,
+  id: ReturnType<typeof bankIdentifier>,
+  signer: string,
+): Promise<SmartContractInstance> {
+  const fxContract = contracts.get(contractsNames.cashdiamond.fxprovider.intf);
+  const fxDiamond = new Diamond(
+    {
+      combinedJson: contracts.combined,
+      rootName: contractsNames.cashdiamond.fxprovider.base,
+      readableName: contractsNames.cashdiamond.fxprovider.readable,
+      writableName: contractsNames.cashdiamond.fxprovider.writable,
+      facetNames: [
+        contractsNames.oppenzeppelin.ownable,
+        contractsNames.cashdiamond.fxprovider.identity,
+        contractsNames.cashdiamond.fxprovider.whitelist,
+        contractsNames.cashdiamond.fxprovider.fxprovider,
+      ],
+      initializeFunctionName: "initialize",
+      initializeFunctionArgs: [ref.deployedAt, Buffer.from(bic), id, signer],
+    },
+    executioner(contracts, owner),
+  );
+  const fxDeployed = await fxDiamond.deploy();
+  const fxInstance = fxContract.at(fxDeployed.rootAddress);
+  return fxInstance;
 }
 
 export async function createHTLCData() {

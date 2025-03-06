@@ -23,14 +23,10 @@ import {
 // these imports are required to ensure compiler optimization does not ignore these contracts
 import {Ownable} from "@fever-tokens/diamond/src/ownable/Ownable.sol";
 
-import {BankBalanceManagementStorage} from "./facets/bank-balances-mgmt/BankBalanceManagementStorage.sol";
-import {BankERC20MetadataStorage} from "./facets/bank-erc20/BankERC20MetadataInternal.sol";
 import {BankIdentityStorage} from "./facets/bank-identity/BankIdentityStorage.sol";
-import {BankNostroManagementStorage} from "./facets/bank-nostros-mgmt/BankNostroManagementStorage.sol";
-import {BankTransferManagementStorage} from "./facets/bank-transfers-mgmt/BankTransferManagementStorage.sol";
-import {HTLCPaymentStorage} from "./facets/htlc-payment/HTLCPaymentStorage.sol";
+import {FXProviderStorage} from "./facets/fx-provider/FXProviderStorage.sol";
 
-contract SoCashBankDiamond is IDiamondBase, DiamondBase, DiamondWritableInternal {
+contract SoCashFXProviderDiamond is IDiamondBase, DiamondBase, DiamondWritableInternal {
     constructor(
         address _diamondReadablePackage,
         address _diamondWritablePackage,
@@ -48,28 +44,20 @@ contract SoCashBankDiamond is IDiamondBase, DiamondBase, DiamondWritableInternal
     receive() external payable {}
 }
 
-contract SoCashBankDiamondReadable is DiamondReadable {
+contract SoCashFXProviderDiamondReadable is DiamondReadable {
 }
 
-contract SoCashBankDiamondWritable is InitializableInternal, DiamondWritableInternal {
+contract SoCashFXProviderDiamondWritable is InitializableInternal, DiamondWritableInternal {
     function initialize(
         ISoCashGlobalReferential routingRef, 
         BIC pBic, 
-        BankIdentifier memory pId, 
-        CCY currency, 
-        uint8 nDecimals
+        BankIdentifier memory pId,
+        address signerAddress
     ) external initializer {
       ReentrancyGuardStorage.__init();
       OwnableStorage.__init(msg.sender);
-      BankBalanceManagementStorage.__init();
-      BankERC20MetadataStorage.__init(
-        string(abi.encodePacked(pBic)), 
-        string(abi.encodePacked(currency)),
-        nDecimals);
       BankIdentityStorage.__init(routingRef, pBic, pId);
-      BankNostroManagementStorage.__init();
-      BankTransferManagementStorage.__init();
-      HTLCPaymentStorage.__init();
+      FXProviderStorage.__init(signerAddress);
     }
 
     function diamondCut(

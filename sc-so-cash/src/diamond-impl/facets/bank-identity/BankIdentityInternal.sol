@@ -33,6 +33,10 @@ contract BankIdentityInternal {
     return BankIdentityStorage.layout().bankIdentifier.country;
   }
 
+  function _version() internal view returns (string memory) {
+    return BankIdentityStorage.layout().version;
+  }
+
   function _ccy() internal view returns (CCY) {
     string memory ccy = ERC20MetadataStorage.layout().symbol;
     return CCY.wrap(bytes3(abi.encodePacked(ccy)));

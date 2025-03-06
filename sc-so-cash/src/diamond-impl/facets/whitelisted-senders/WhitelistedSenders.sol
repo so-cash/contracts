@@ -13,11 +13,11 @@ contract WhitelistedSenders is WhitelistedSendersInternal, IWhitelistedSenders {
         return _isWhitelisted(a);
     }
 
-    function whitelist(address newSender) external override {
+    function whitelist(address newSender) external onlyWhitelisted override {
         _whitelist(newSender);
     }
 
-    function blacklist(address oldSender) external override {
+    function blacklist(address oldSender) external onlyWhitelisted override {
         _blacklist(oldSender);
     }
 }

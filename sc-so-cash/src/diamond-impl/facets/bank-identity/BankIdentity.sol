@@ -29,6 +29,10 @@ contract BankIdentity is ISoCashBankIdentity, BankIdentityInternal {
     return _country();
   }
 
+  function version() external view override returns (string memory) {
+    return _version();
+  }
+
   function currency() external view returns (CCY) {
     return _ccy();
   }

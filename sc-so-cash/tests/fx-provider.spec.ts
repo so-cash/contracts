@@ -30,6 +30,7 @@ import {
   blockTimestamp,
   contractsNames,
   createAccount,
+  createFXProvider,
   receipientInfo,
 } from "@so-cash/sc-shared";
 
@@ -51,13 +52,21 @@ describe("Test SoCash FX Provider", async function () {
   });
 
   it("should deploy the FX Provider", async () => {
-    const contract = socashContracts.get(contractsNames.cash.fxProvider);
+    // const contract = socashContracts.get(contractsNames.cash.fxProvider);
     const owner = await getNewWallet(web3, "FxProviderOwner", true);
     const wallet = createAutonomousWallet(web3, "Signatory");
 
-    const instance = await contract.deploy(
-      owner.newi(),
-      ref.root.deployedAt,
+    // const instance = await contract.deploy(
+    //   owner.newi(),
+    //   ref.root.deployedAt,
+    //   wallet.address,
+    // );
+    const instance = await createFXProvider(
+      socashContracts,
+      owner,
+      ref.root,
+      "AGRIFRPPXXX",
+      bankIdentifier("FR", ["30000"]),
       wallet.address,
     );
 
@@ -80,14 +89,22 @@ describe("Test SoCash FX Provider", async function () {
   });
 
   it("should sign FX Rate structure and validate the signature on-chain", async () => {
-    const contract = socashContracts.get(contractsNames.cash.fxProvider);
+    // const contract = socashContracts.get(contractsNames.cash.fxProvider);
     const owner = await getNewWallet(web3, "FxProviderOwner", true);
     const signerWallet = createAutonomousWallet(web3, "Signatory");
     console.log(`Signatory private key: ${signerWallet.privateKey}`);
 
-    const instance = await contract.deploy(
-      owner.newi(),
-      ref.root.deployedAt,
+    // const instance = await contract.deploy(
+    //   owner.newi(),
+    //   ref.root.deployedAt,
+    //   signerWallet.address,
+    // );
+    const instance = await createFXProvider(
+      socashContracts,
+      owner,
+      ref.root,
+      "AGRIFRPPXXX",
+      bankIdentifier("FR", ["30000"]),
       signerWallet.address,
     );
 
@@ -165,13 +182,23 @@ describe("Test SoCash FX Provider", async function () {
     );
 
     // create a FX provider
-    const contract = socashContracts.get(contractsNames.cash.fxProvider);
+    const contract = socashContracts.get(
+      contractsNames.cashdiamond.fxprovider.intf,
+    );
     const owner = await getNewWallet(web3, "FxProviderOwner", true);
     const signer = createAutonomousWallet(web3, "Signatory");
 
-    const instance = await contract.deploy(
-      owner.newi(),
-      ref.root.deployedAt,
+    // const instance = await contract.deploy(
+    //   owner.newi(),
+    //   ref.root.deployedAt,
+    //   signer.address,
+    // );
+    const instance = await createFXProvider(
+      socashContracts,
+      owner,
+      ref.root,
+      "AGRIFRPPXXX",
+      bankIdentifier("FR", ["30000"]),
       signer.address,
     );
 
@@ -280,5 +307,17 @@ describe("Test SoCash FX Provider", async function () {
       "rate expiry:",
       fxRate.expiryTime,
     );
+
+    // Should not be able to reuse the fxRate once settle
+    const p = fxProvider.settlement(
+      bankEUR.boUser.send(), // can only be called by who created the hash AND an operator allowed on the source account
+      receipientInfo(clientEUR.deployedAt),
+      receipientInfo(clientUSD.deployedAt),
+      100_00,
+      fxRate,
+      signature,
+      "FX operation",
+    );
+    await expect(p).to.be.rejectedWith(/Rate already used by a caller/);
   });
 });

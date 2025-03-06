@@ -3,20 +3,19 @@
 
 pragma solidity ^0.8.17;
 
-import {OnlyOnceStorage} from "../../only-once/OnlyOnceStorage.sol";
+
 /**
   Library that is meant to be used by the Facet internal implementation to manage the storage data structure.
   The layout() function is meant to be internal so the library is embeded in the Facet contract.
  */
 
-library Facet2Storage {
+library OnlyOnceStorage {
     struct Layout {
-      string text;
-      int256 value;
+      mapping(bytes32 => bool) _onlyOnceMap;
     }
 
     bytes32 internal constant STORAGE_SLOT =
-        keccak256("sample.contracts.storage.Facet2");
+        keccak256("fevertokens.contracts.storage.OnlyOnce");
 
     function layout() internal pure returns (Layout storage l) {
         bytes32 slot = STORAGE_SLOT;
@@ -24,11 +23,13 @@ library Facet2Storage {
             l.slot := slot
         }
     }
-
-    function __init(string memory text) internal {
-        if (OnlyOnceStorage.onlyOnce(STORAGE_SLOT)) {
-            Layout storage l = layout();
-            l.text = text;
+    
+    function onlyOnce(bytes32 key) internal returns (bool) {
+        Layout storage l = layout();
+        if (l._onlyOnceMap[key]) {
+            return false;
         }
+        l._onlyOnceMap[key] = true;
+        return true;
     }
 }

@@ -93,7 +93,9 @@ contract BankExternalServices is ISoCashBankExternalWOTransfer, BankERC20Metadat
   function country() external view returns (bytes2 ) {
     return _country();
   }
-
+  function version() external view override returns (string memory) {
+    return _version();
+  }
   function lockedBalanceOf(ISoCashAccount account) external view override returns (uint256) {
     return _lockedBalanceOf(account);
   }

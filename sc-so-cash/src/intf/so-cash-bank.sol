@@ -6,7 +6,7 @@ import {IERC20Internal} from "@fever-tokens/diamond/src/token/ERC20/IERC20Intern
 import "./so-cash-types.sol";
 import {BankIdentifier, BankAccount} from "@so-cash/sc-so-cash-ref/src/intf/so-cash-referential.sol";
 
-
+import {IWhitelistedSenders} from "./whitelisted-senders.sol";
 
 interface IERC20CompatibilityMetadata {
     function name() external view returns (string memory);
@@ -36,6 +36,7 @@ interface IERC20Compatibility is IERC20CompatibilityBaseInternal, IERC20Compatib
 }
 
 interface ISoCashBankIdentity {
+    function version () external view returns (string memory);
     function bic() external view returns (string memory);
     function codes() external view returns (CodeType bankCode, CodeType branchCode);
     function bankIdentifier() external view returns (BankIdentifier memory id);
@@ -146,13 +147,16 @@ interface ISoCashBankPaymentSimulation {
     function simulateTransfer(ISoCashAccount fromAccount, RecipentInfo memory to, uint256 amount) external view returns (ExecutionPlan memory);
     function simulateInterbankTransfer(ISoCashBank fromBank, RecipentInfo memory to, uint256 amount) external view returns (ExecutionPlan memory plan);
 }
-interface ISoCashBankFull is ISoCashBankExternal, ISoCashInterBank, ISoCashBankBackOffice, ISoCashBankPaymentSimulation {
+interface ISoCashBankFull is IWhitelistedSenders, ISoCashBankExternal, ISoCashInterBank, ISoCashBankBackOffice, ISoCashBankPaymentSimulation {
 }
 
 
 
-interface ISoCashFXProvider {
+interface ISoCashFXProviderInternal {
     event CurrencyAccountSet(CCY indexed ccy, ISoCashAccount account);
+    event FXSettlement(ISoCashAccount indexed from, ISoCashAccount indexed to, uint256 amount, uint256 rate);
+}
+interface ISoCashFXProvider is ISoCashFXProviderInternal{
     function setCurrencyAccount(CCY ccy, ISoCashAccount account) external;
 
     function setFXRateSource(CCY base, CCY quote, string calldata source) external;
@@ -163,6 +167,7 @@ interface ISoCashFXProvider {
 
     function hashOfFXRate(FXRate memory rate) external view returns (bytes32);
     function verifyFXRate(FXRate memory rate, bytes memory signature) external view returns (bool);
-    event FXSettlement(ISoCashAccount indexed from, ISoCashAccount indexed to, uint256 amount, uint256 rate);
     function settlement(RecipentInfo calldata from, RecipentInfo calldata to, uint256 amount, FXRate calldata rate, bytes calldata signature, string calldata details) external returns (bool);
 }
+
+interface ISoCashFXProviderFull is ISoCashFXProvider, IWhitelistedSenders, ISoCashBankIdentity {}
