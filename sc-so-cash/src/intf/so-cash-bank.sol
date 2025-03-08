@@ -143,11 +143,16 @@ interface ISoCashBankBackOfficeServices {
 interface ISoCashBankBackOffice is ISoCashBankBackOfficeServices, ISoCashBackOfficePayments, ISoCashBankTransferManagementInternal, ISoCashBankNostroManagementInternal, ISoCashBankBalanceManagementInternal{
 }
 
+interface ISoCashBankExplainPlan {
+    // event that is not a public api purpose but is usefull for debugging the execution plan
+    event ExplainPlan(ExecutionPlan plan);
+}
+
 interface ISoCashBankPaymentSimulation {
     function simulateTransfer(ISoCashAccount fromAccount, RecipentInfo memory to, uint256 amount) external view returns (ExecutionPlan memory);
     function simulateInterbankTransfer(ISoCashBank fromBank, RecipentInfo memory to, uint256 amount) external view returns (ExecutionPlan memory plan);
 }
-interface ISoCashBankFull is IWhitelistedSenders, ISoCashBankExternal, ISoCashInterBank, ISoCashBankBackOffice, ISoCashBankPaymentSimulation {
+interface ISoCashBankFull is IWhitelistedSenders, ISoCashBankExternal, ISoCashInterBank, ISoCashBankBackOffice, ISoCashBankPaymentSimulation, ISoCashBankExplainPlan {
 }
 
 

@@ -203,7 +203,11 @@ describe("Test how to manage diamond facet versionning", async function () {
     );
     console.log("Facets hashes to replace", facetsToReplace);
     await newDiamond.upgrade(
-      ...facetsToReplace.map((f) => ({ facet: f.name, withFacet: f.name })),
+      ...facetsToReplace.map((f) => ({
+        facet: f.name,
+        withFacet: f.name,
+        initParams: f.name == "Facet2" ? [42] : [],
+      })),
     );
     console.log("New Diamond after upgrade:", newDiamond.deployedAt);
 
@@ -212,10 +216,18 @@ describe("Test how to manage diamond facet versionning", async function () {
     const replacements = Object.entries(newDiamond.deployedAt.facetAddresses)
       .map(([name, address]) => {
         if (address != initialDeploy.facetAddresses[name])
-          return { facet: name, withFacet: initialDeploy.facetAddresses[name] };
+          return {
+            facet: name,
+            withFacet: initialDeploy.facetAddresses[name],
+            initParams: name == "Facet2" ? [0] : [],
+          };
         else return undefined;
       })
-      .filter((r) => !!r) as { facet: string; withFacet: string }[];
+      .filter((r) => !!r) as {
+      facet: string;
+      withFacet: string;
+      initParams?: any[];
+    }[];
     await newDiamond.upgrade(...replacements);
     console.log("Rollbacked diamond after upgrade", newDiamond.deployedAt);
 

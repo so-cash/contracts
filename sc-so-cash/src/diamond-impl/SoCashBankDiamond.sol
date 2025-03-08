@@ -29,6 +29,7 @@ import {BankIdentityStorage} from "./facets/bank-identity/BankIdentityStorage.so
 import {BankNostroManagementStorage} from "./facets/bank-nostros-mgmt/BankNostroManagementStorage.sol";
 import {BankTransferManagementStorage} from "./facets/bank-transfers-mgmt/BankTransferManagementStorage.sol";
 import {HTLCPaymentStorage} from "./facets/htlc-payment/HTLCPaymentStorage.sol";
+import {WhitelistedSendersInternal} from "./facets/whitelisted-senders/WhitelistedSendersInternal.sol";
 
 contract SoCashBankDiamond is IDiamondBase, DiamondBase, DiamondWritableInternal {
     constructor(
@@ -51,7 +52,7 @@ contract SoCashBankDiamond is IDiamondBase, DiamondBase, DiamondWritableInternal
 contract SoCashBankDiamondReadable is DiamondReadable {
 }
 
-contract SoCashBankDiamondWritable is InitializableInternal, DiamondWritableInternal {
+contract SoCashBankDiamondWritable is InitializableInternal, DiamondWritableInternal, WhitelistedSendersInternal {
     function initialize(
         ISoCashGlobalReferential routingRef, 
         BIC pBic, 
@@ -76,7 +77,7 @@ contract SoCashBankDiamondWritable is InitializableInternal, DiamondWritableInte
         FacetCut[] calldata facetCuts,
         address target,
         bytes calldata data
-    ) external { // TODO: add user access control with a modifier
+    ) external onlyWhitelisted { 
         _diamondCut(facetCuts, target, data);
     }
 }

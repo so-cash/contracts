@@ -31,4 +31,5 @@ contract WhitelistedSendersInternal is OwnableInternal, IWhitelistedSendersInter
         l._whitelistedSenders[oldSender] = false;
         emit Whitelisted(oldSender, false);
     }
+
 }

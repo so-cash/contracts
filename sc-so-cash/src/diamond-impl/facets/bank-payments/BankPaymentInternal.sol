@@ -30,6 +30,7 @@ import {
 } from "../../../intf/so-cash-account.sol";
 import {
   ISoCashBankPaymentInternal,
+  ISoCashBankExplainPlan,
   ISoCashBankExternal,
   ISoCashBankIdentity
 } from "../../../intf/so-cash-bank.sol";
@@ -39,7 +40,7 @@ import {BankCorrespondentInternal} from "../bank-correspondents/BankCorresponden
 import {BankNostroManagementInternal} from "../bank-nostros-mgmt/BankNostroManagementInternal.sol";
 import {BankTransferManagementInternal} from "../bank-transfers-mgmt/BankTransferManagementInternal.sol";
 
-contract BankPaymentInternal is ISoCashBankPaymentInternal, BankCorrespondentInternal, BankNostroManagementInternal, BankTransferManagementInternal {
+contract BankPaymentInternal is ISoCashBankPaymentInternal, ISoCashBankExplainPlan, BankCorrespondentInternal, BankNostroManagementInternal, BankTransferManagementInternal {
   function ZERO_BANK_ACCOUNT() internal pure returns (BankAccount memory) {
       return BankAccount(BankModel.UNDEFINED, address(0), address(0));
   }
@@ -279,8 +280,6 @@ contract BankPaymentInternal is ISoCashBankPaymentInternal, BankCorrespondentInt
     return success;
   }
 
-  // event that is not a public api purpose but is usefull for debugging the execution plan
-  event ExplainPlan(ExecutionPlan plan);
   function _transferLogic(ISoCashAccount sender, RecipentInfo memory to, uint256 amount, TransferId id) internal returns (bool) {
 
     ExecutionPlan memory plan = _transferExecutionPlan(sender, to, amount, id);

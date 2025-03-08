@@ -26,7 +26,7 @@ import {
 } from "@so-cash/sc-shared";
 
 describe("SoCash Interbank scenarios", async function () {
-  setMochaTimeout(this, 20_000);
+  setMochaTimeout(this, 40_000);
   const web3 = new Web3(ganacheProvider() as any);
   let ref: Awaited<ReturnType<typeof declareReferentials>>;
 

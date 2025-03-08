@@ -20,4 +20,7 @@ contract WhitelistedSenders is WhitelistedSendersInternal, IWhitelistedSenders {
     function blacklist(address oldSender) external onlyWhitelisted override {
         _blacklist(oldSender);
     }
+    
+    function __init() external {
+    }
 }

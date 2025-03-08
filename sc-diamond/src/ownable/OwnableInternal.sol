@@ -5,8 +5,13 @@ pragma solidity ^0.8.17;
 
 import {IOwnableInternal} from "./IOwnableInternal.sol";
 import {OwnableStorage} from "./OwnableStorage.sol";
+import {OnlyOnceInternal} from "../only-once/OnlyOnceInternal.sol";
 
-abstract contract OwnableInternal is IOwnableInternal {
+abstract contract OwnableInternal is IOwnableInternal, OnlyOnceInternal {
+    function _slot() internal pure virtual returns (bytes32) {
+        return OwnableStorage.STORAGE_SLOT;
+    }
+    
     modifier onlyOwner() {
         require(msg.sender == _owner(), "ERC173: sender must be owner");
         _;
@@ -25,4 +30,5 @@ abstract contract OwnableInternal is IOwnableInternal {
         emit OwnershipTransferred(l.owner, account);
         l.owner = account;
     }
+
 }

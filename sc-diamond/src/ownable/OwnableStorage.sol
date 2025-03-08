@@ -2,6 +2,7 @@
 // FeverTokens Contracts v1.0.0
 
 pragma solidity ^0.8.17;
+import {OnlyOnceStorage} from "../only-once/OnlyOnceStorage.sol";
 
 library OwnableStorage {
     struct Layout {
@@ -19,7 +20,9 @@ library OwnableStorage {
     }
 
     function __init(address _owner) internal {
-        OwnableStorage.Layout storage l = OwnableStorage.layout();
-        l.owner = _owner;
+        if (OnlyOnceStorage.onlyOnce(STORAGE_SLOT)) {
+            OwnableStorage.Layout storage l = OwnableStorage.layout();
+            l.owner = _owner;
+        }
     }
 }

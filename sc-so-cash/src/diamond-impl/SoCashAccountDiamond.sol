@@ -14,7 +14,8 @@ import {OwnableStorage} from "@fever-tokens/diamond/src/ownable/OwnableStorage.s
 import {ReentrancyGuardStorage} from "@fever-tokens/diamond/src/security/ReentrancyGuardStorage.sol";
 
 // these imports are required to ensure compiler optimization does not ignore these contracts
-import {Ownable} from "@fever-tokens/diamond/src/ownable/Ownable.sol";
+// import {OwnableInternal} from "@fever-tokens/diamond/src/ownable/OwnableInternal.sol";
+import {WhitelistedSendersInternal} from "./facets/whitelisted-senders/WhitelistedSendersInternal.sol";
 // import {ERC20Base} from "@fever-tokens/diamond/src/token/ERC20/base/ERC20Base.sol";
 // import {ReentrancyGuard} from "@fever-tokens/diamond/src/security/ReentrancyGuard.sol";
 
@@ -39,7 +40,7 @@ contract SoCashAccountDiamond is IDiamondBase, DiamondBase, DiamondWritableInter
 contract SoCashAccountDiamondReadable is DiamondReadable {
 }
 
-contract SoCashAccountDiamondWritable is InitializableInternal, DiamondWritableInternal {
+contract SoCashAccountDiamondWritable is InitializableInternal, DiamondWritableInternal, WhitelistedSendersInternal {
     function initialize(string memory name) external initializer {
       ReentrancyGuardStorage.__init();
       OwnableStorage.__init(msg.sender);
@@ -50,7 +51,7 @@ contract SoCashAccountDiamondWritable is InitializableInternal, DiamondWritableI
         FacetCut[] calldata facetCuts,
         address target,
         bytes calldata data
-    ) external { // TODO: add user access control with a modifier
+    ) external onlyWhitelisted { // TODO: add user access control with a modifier
         _diamondCut(facetCuts, target, data);
     }
 }

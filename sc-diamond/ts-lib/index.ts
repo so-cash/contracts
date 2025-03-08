@@ -3,6 +3,7 @@
  * @module sc-diamond
  * This typescript library is used to facilitate the preparation of diamond deployment with its facets
  */
+import { ZeroAddress } from "@so-cash/sc-shared/utils";
 import AbiCoder from "web3-eth-abi";
 import Utils, { AbiItem } from "web3-utils";
 // fix the lib issue which type declares jsonInterfaceMethodToString but really it exports the function as _jsonInterfaceMethodToString
@@ -190,6 +191,14 @@ function prepareCombined(
   };
 }
 
+// init function in the same order as the FacetCutActions Add, Replace, Remove, All
+const initFunctions: string[] = [
+  "__initAdd",
+  "__initReplace",
+  "__initRemove",
+  "__init",
+];
+
 export class Diamond {
   protected _deployedAt?: DeployedDiamond;
   protected _facets?: Facet[];
@@ -219,9 +228,13 @@ export class Diamond {
       target: facet.target,
       functions: facet.selectors.map((selector: string) => ({
         selector,
-        fullName: this.internalCombined.functions.get(selector),
+        fullName:
+          this.internalCombined.functions.get(selector) ||
+          `NoName_${selector}()`,
       })),
-      name: this.findBestContractNameBySelectors(facet.selectors, true),
+      name:
+        this.findBestContractNameBySelectors(facet.selectors, true) ||
+        `Unknown_${facet.target.slice(2, 10)}`,
     }));
     // update the config to avoid error in case of new deployment
     this.config.facetNames = this._facets
@@ -232,6 +245,14 @@ export class Diamond {
           name !== this.config.readableName &&
           name !== this.config.writableName,
       );
+    if (this._deployedAt) {
+      this._deployedAt.facetAddresses = this._facets.reduce<{
+        [name: string]: string;
+      }>((acc, facet) => {
+        acc[facet.name!] = facet.target;
+        return acc;
+      }, {});
+    }
   }
 
   static async fromAddress(
@@ -306,6 +327,13 @@ export class Diamond {
     return contract;
   }
 
+  hasContract(name: string, backup?: string): boolean {
+    return (
+      this.internalCombined.names.has(name) ||
+      (!!backup && this.internalCombined.names.has(backup))
+    );
+  }
+
   getContract(name: string, backup?: string): CompiledSmartContract {
     const contract = Diamond.getContractFromCombined(
       this.internalCombined,
@@ -340,6 +368,7 @@ export class Diamond {
 
     return contract.abi
       .filter((abi) => abi.type === "function")
+      .filter((abi) => !initFunctions.includes(abi.name!)) // remove the init functions that are not intended to be exposed
       .map((abi) => AbiCoder.encodeFunctionSignature(abi));
   }
 
@@ -413,14 +442,16 @@ export class Diamond {
   protected async deployFacets(facetNames: string[], isUpgrade = false) {
     const facetAddresses: { [name: string]: string } = {};
     const deployments = await Promise.all(
-      facetNames.map(async (name) => {
-        const contract = this.getContract(name);
-        const addr = await this.executioner.deployer(name, contract, {
-          isFacet: true,
-          isUpgrade,
-        });
-        return [name, addr] as [string, string];
-      }),
+      facetNames
+        .filter((name) => this.hasContract(name))
+        .map(async (name) => {
+          const contract = this.getContract(name);
+          const addr = await this.executioner.deployer(name, contract, {
+            isFacet: true,
+            isUpgrade,
+          });
+          return [name, addr] as [string, string];
+        }),
     );
     deployments.forEach(([name, addr]) => {
       facetAddresses[name] = addr;
@@ -429,19 +460,6 @@ export class Diamond {
   }
 
   async deploy(debug?: boolean): Promise<DeployedDiamond> {
-    // start by deploying the facets, readable and writable facets
-    // const facetAddresses: { [name: string]: string } = {};
-    // for (const name of [
-    //   ...this.config.facetNames,
-    //   this.config.readableName,
-    //   this.config.writableName,
-    // ]) {
-    //   const contract = this.getContract(name);
-    //   // no parameters expected
-    //   facetAddresses[name] = await this.executioner.deployer(name, contract, {
-    //     isFacet: true,
-    //   });
-    // }
     const facetAddresses = await this.deployFacets([
       ...this.config.facetNames,
       this.config.readableName,
@@ -518,204 +536,198 @@ export class Diamond {
   async upgrade(
     ...replace: { facet: string; withFacet: string; initParams?: any[] }[]
   ): Promise<DeployedDiamond> {
-    if (!this._deployedAt) {
+    // replace is an array with the facet name to replace with a new facet name or an existing facet address
+    // when the facet name has not been resolved the name is "Unknown_ABCDEF1234" where ABCDEF1234 is the first 8 characters of the address
+    // when the target facet is an address, it is considered as an existing facet and will not be deployed
+    // when the new facet is a new facet that did not exists, both facet and withFacet are the same
+    if (!this._deployedAt || !this._deployedAt.rootAddress) {
       throw new Error("Diamond not yet deployed");
     }
-    const rootAddress = this._deployedAt.rootAddress;
-    const replaceTargets = replace.map(
-      ({ facet }) => this._deployedAt!.facetAddresses[facet],
-    );
-    // identify the new facets names to be deployed (they are not addresses)
-    const newFacets = replace
+
+    // the algo will need to identify the selectors that need to be replaced, added and removed based on this replace array
+    // it will then need to call the diamondCut function with the new selectors
+    // it will also need to call the __init???(...) function on the new facets that have been added or replaced or removed
+
+    // Add the target address based on the name provided
+    let withAddress = replace.map((r) => ({
+      ...r,
+      currentAddress: this._deployedAt!.facetAddresses[r.facet] || ZeroAddress, // can be Zero if the facet does not exist yet
+      targetAddress: "", // will be resolved later
+      existingSelectors: [] as FacetFunction[],
+      newSelectors: [] as FacetFunction[],
+    }));
+
+    // first identify the new facets that need to be deployed
+    const deployable = withAddress
       .filter((r) => !r.withFacet.startsWith("0x"))
-      .map(({ withFacet }) => withFacet);
-    const newFacetsProvidedAddress = replace.filter((r) =>
-      r.withFacet.startsWith("0x"),
+      .filter((r) => this.hasContract(r.withFacet));
+
+    // identify the facet that have been provided as addresses
+    withAddress
+      .filter((r) => r.withFacet.startsWith("0x")) // only the one that are addresses
+      .forEach((r) => {
+        r.targetAddress = r.withFacet;
+        // use the facet name as the target name when we are not removing the target
+        if (r.withFacet !== ZeroAddress) r.withFacet = r.facet;
+      });
+
+    // the facets that are not valid names or addresses will be ignored
+
+    // deploy the new facets and set the target address
+    const deployedAddress = await this.deployFacets(
+      deployable.map((r) => r.withFacet),
+      true,
     );
-    // const newFacetAddresses: { [name: string]: string } = {};
-    const newFacetFunctions: FacetFunctionWithTarget[] = [];
+    withAddress
+      .filter((f) => f.withFacet in deployedAddress) // only the one that have been deployed
+      .forEach((f) => (f.targetAddress = deployedAddress[f.withFacet]));
 
-    // start by deploying the new facets
-    const newFacetAddresses = await this.deployFacets(newFacets, true);
+    // all the facets now have a current address and a target address
+    withAddress = withAddress.filter((f) => f.targetAddress); // remove the one that have not been resolved
+    withAddress = withAddress.filter((f) => f.currentAddress); // remove the one that have not been resolved
+    withAddress = withAddress.filter(
+      (f) => f.currentAddress !== f.targetAddress,
+    ); // remove the one that are the same, so no change needed
 
-    // add the addresses that were provided as inputs
-    newFacetsProvidedAddress.forEach(({ facet, withFacet }) => {
-      newFacets.push(facet); // will also need to be replaced
-      newFacetAddresses[facet] = withFacet;
-    });
-
-    // init function in the same order as the FacetCutActions Add, Replace, Remove, All
-    const initFunctions: string[] = [
-      "__initAdd",
-      "__initReplace",
-      "__initRemove",
-      "__init",
-    ];
-
-    for (const name of newFacets) {
-      // get the list of selectors of the new facet
-      newFacetFunctions.push(
-        ...this.internalCombined.contractSelectors
-          .get(name)!
+    // identify the selectors of the facets
+    withAddress.forEach((f) => {
+      // get the existing selectors
+      const existing = this.facets.find(
+        (facet) => facet.target === f.currentAddress,
+      );
+      if (existing) {
+        // when not found we keep an empty array
+        f.existingSelectors = existing.functions
+          // remove the __init???(...) functions
+          .filter(
+            (func) => !initFunctions.includes(func.fullName!.split("(")[0]),
+          );
+      }
+      // get the new selectors if the facet is a name
+      if (this.hasContract(f.withFacet)) {
+        f.newSelectors = this.internalCombined.contractSelectors
+          .get(f.withFacet)!
           .map((selector) => ({
             selector,
-            fullName: this.internalCombined.functions.get(selector),
-            target: newFacetAddresses[name],
+            fullName:
+              this.internalCombined.functions.get(selector) ||
+              `NoName_${selector}()`,
           }))
-          // remove the init functions from the list
+          // remove the __init???(...) functions
           .filter(
-            (f) =>
-              !f.fullName || !initFunctions.includes(f.fullName.split("(")[0]),
-          ),
-      );
-    }
-
-    // identify the gaps between the existing facets and the new ones
-    // replace array is the list of existing facet address (facetAddress) and the name of the new facet class to replace it with (withFacet)
-
-    // start by getting the list of selectors in the existing diamond's facets
-    const existing = this.facets.filter((facet) =>
-      replaceTargets.includes(facet.target),
-    );
-    const existingSelectors = existing.flatMap<FacetFunctionWithTarget>(
-      (facet) => facet.functions.map((f) => ({ ...f, target: facet.target })),
-    );
-
-    // initActions will contains the targets and initAction to try to call on them
-    const initActions: Map<string, { target: string; action: FacetCutAction }> =
-      new Map();
-
-    let diamondCuts: DiamondCut[] = [];
-    const touchedTargets = new Set<string>();
-    // parse the new facet selectors to see if these functions already exist in the diamond
-    for (const { selector, target } of newFacetFunctions) {
-      const existingFunction = existingSelectors.find(
-        (f) => f.selector === selector,
-      );
-      if (existingFunction) {
-        if (target !== ZERO_ADDRESS) {
-          // replace the existing function
-          diamondCuts.push({
-            target,
-            action: FacetCutAction.Replace,
-            selectors: [selector],
-          });
-        } else {
-          // delete this function as the target is zero
-          diamondCuts.push({
-            target: ZERO_ADDRESS,
-            action: FacetCutAction.Remove,
-            selectors: [selector],
-          });
-        }
-        touchedTargets.add(existingFunction.target);
+            (func) => !initFunctions.includes(func.fullName?.split("(")[0]),
+          );
       } else {
-        // add the new function
-        diamondCuts.push({
-          target,
-          action: FacetCutAction.Add,
-          selectors: [selector],
-        });
-      }
-    }
-    // we now need to identify if there are selector to remove, these are the ones that are in the old addresses but not replaced
-    for (const { selector, target } of existingSelectors) {
-      if (touchedTargets.has(target)) {
-        // this selector is concerned
-        // has it been replaced ?
-        const replaced = diamondCuts.find((cut) =>
-          cut.selectors.includes(selector),
-        );
-        if (!replaced) {
-          // this selector is not replaced, remove it
-          diamondCuts.push({
-            target: ZERO_ADDRESS,
-            action: FacetCutAction.Remove,
-            selectors: [selector],
-          });
-        }
-      }
-    }
-    // now reconstruct the cuts so that we reduce the number of cuts by grouping on target and action
-    const groupedCuts: Map<string, DiamondCut> = new Map(); // the key is target-action
-    diamondCuts.forEach((cut) => {
-      const key = `${cut.target}-${cut.action}`;
-      if (groupedCuts.has(key)) {
-        groupedCuts.get(key)!.selectors.push(...cut.selectors);
-      } else {
-        groupedCuts.set(key, { ...cut });
-        initActions.set(key, { target: cut.target, action: cut.action });
+        // the withFacet is the zero address, we do not have the selectors
+        f.newSelectors = [];
       }
     });
-    diamondCuts = Array.from(groupedCuts.values());
-    // console.log("Diamond Cuts", diamondCuts);
 
-    // prepare the new list of facet addresses as they will be after the upgrade
-    let facetAddresses = { ...this._deployedAt.facetAddresses };
-    for (const facet in facetAddresses) {
-      if (replaceTargets.includes(facetAddresses[facet])) {
-        delete facetAddresses[facet];
-      }
-    }
-    facetAddresses = { ...facetAddresses, ...newFacetAddresses };
-    // remove facet that have been removed because their new address is zero
-    for (const facet in facetAddresses) {
-      if (facetAddresses[facet] === ZERO_ADDRESS) {
-        delete facetAddresses[facet];
-      }
-    }
-
-    await this.executioner.executer(
-      this.config.writableName,
-      this.getContract(this.config.writableName),
-      rootAddress,
-      "diamondCut",
-      diamondCuts,
-      ZERO_ADDRESS,
-      "0x",
-    );
-
-    // Here we want to call an initialisation function on the facets that have been added or replaced
-    // the function is expected to have a specific signature "__init???(...)" and is expected to manage the state adjustment
-    // The function is also expected to manage re-initialization situation
-    const executed: string[] = []; // to avoid executing twice the same function
-    for (const { target, action } of Array.from(initActions.values())) {
-      let funcName = initFunctions[action];
-      // get the facet name of the target
-      const res = Object.entries(newFacetAddresses).find(
-        ([_, addr]) => addr === target,
+    // now we have the existing selectors and the new selectors for each facet
+    // we can now identify the selectors that need to be added, replaced and removed
+    const mapDiamondCuts: Map<string, DiamondCut> = new Map(); // key is target-action
+    for (const f of withAddress) {
+      // identify the selectors to remove
+      const toRemove = f.existingSelectors.filter(
+        (s) => !f.newSelectors.find((ns) => ns.selector === s.selector),
       );
-      if (!res) continue; // this should not happen
-      const name = res[0];
-      // get the function in the contract
-      let funcAbi = this.getContractFunction(name, funcName);
-      if (!funcAbi) {
-        // try the generic __init(...) function
-        funcName = initFunctions[FacetCutAction.All];
-        funcAbi = this.getContractFunction(name, funcName);
-      }
-      if (!funcAbi) continue; // no init function found - ignore this target
-      if (executed.includes(`${target}-${funcName}`)) continue; // already executed
-      const replacement = replace.find((r) => r.withFacet === name);
-      let initParams = replacement?.initParams || [];
-      // call the init function
+      // identify the selectors to add
+      const toAdd = f.newSelectors.filter(
+        (ns) => !f.existingSelectors.find((s) => s.selector === ns.selector),
+      );
+      // identify the selectors to replace
+      const toReplace = f.newSelectors.filter((ns) =>
+        f.existingSelectors.find((s) => s.selector === ns.selector),
+      );
+      // build the diamond cut
+      toRemove.forEach((s) => {
+        const key = `${f.currentAddress}-${FacetCutAction.Remove}`;
+        if (!mapDiamondCuts.has(key)) {
+          mapDiamondCuts.set(key, {
+            target: ZeroAddress,
+            action: FacetCutAction.Remove,
+            selectors: [],
+          });
+        }
+        mapDiamondCuts.get(key)!.selectors.push(s.selector);
+      });
+      toAdd.forEach((s) => {
+        const key = `${f.targetAddress}-${FacetCutAction.Add}`;
+        if (!mapDiamondCuts.has(key)) {
+          mapDiamondCuts.set(key, {
+            target: f.targetAddress,
+            action: FacetCutAction.Add,
+            selectors: [],
+          });
+        }
+        mapDiamondCuts.get(key)!.selectors.push(s.selector);
+      });
+      toReplace.forEach((s) => {
+        const key = `${f.targetAddress}-${FacetCutAction.Replace}`;
+        if (!mapDiamondCuts.has(key)) {
+          mapDiamondCuts.set(key, {
+            target: f.targetAddress,
+            action: FacetCutAction.Replace,
+            selectors: [],
+          });
+        }
+        mapDiamondCuts.get(key)!.selectors.push(s.selector);
+      });
+    }
+
+    // now we have the diamond cuts, we can now execute
+    const diamondCuts = Array.from(mapDiamondCuts.values());
+    // console.log("Diamond Cuts", diamondCuts);
+    if (diamondCuts.length > 0) {
       await this.executioner.executer(
         this.config.writableName,
         this.getContract(this.config.writableName),
-        rootAddress,
+        this._deployedAt.rootAddress,
         "diamondCut",
-        [], // No cut to perform, we just use the init data
-        target,
-        AbiCoder.encodeFunctionCall(funcAbi, initParams),
+        diamondCuts,
+        ZERO_ADDRESS,
+        "0x",
       );
-      executed.push(`${target}-${funcName}`);
     }
 
+    // now we need to call the __init???(...) function on the new facets
+    const initPromises = withAddress.map(async (f) => {
+      const executedFunc: string[] = [];
+      // try all 3 type of init functions
+      for (const { action, address } of [
+        { action: FacetCutAction.Remove, address: f.currentAddress },
+        { action: FacetCutAction.Replace, address: f.targetAddress },
+        { action: FacetCutAction.Add, address: f.targetAddress },
+      ]) {
+        const key = `${address}-${action}`;
+        // did we have a cut for this action ?
+        if (mapDiamondCuts.has(key)) {
+          let funcName = initFunctions[action];
+          let funcAbi = this.getContractFunction(f.withFacet, funcName);
+          if (!funcAbi) {
+            // try the generic __init(...) function
+            funcName = initFunctions[FacetCutAction.All];
+            funcAbi = this.getContractFunction(f.withFacet, funcName);
+          }
+          // if we found a function to execute and it is not already executed
+          if (funcAbi && !executedFunc.includes(funcAbi.name!)) {
+            await this.executioner.executer(
+              this.config.writableName,
+              this.getContract(this.config.writableName),
+              this._deployedAt!.rootAddress,
+              "diamondCut",
+              [], // No cut to perform, we just use the init data
+              address,
+              AbiCoder.encodeFunctionCall(funcAbi, f.initParams || []),
+            );
+            executedFunc.push(funcAbi.name!);
+          }
+        }
+      }
+    });
+    await Promise.all(initPromises);
+
     await this.loadFacets();
-    this._deployedAt = {
-      rootAddress,
-      facetAddresses,
-    };
     return this._deployedAt;
   }
 }
