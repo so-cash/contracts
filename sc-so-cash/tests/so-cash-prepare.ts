@@ -2,7 +2,7 @@ import Web3 from "web3";
 
 import referentialContracts from "@so-cash/sc-so-cash-ref";
 import allContracts from "../build";
-import accContractsJson from "../build/combined.json" assert { type: "json" };
+
 import {
   map,
   traceEventLog,
@@ -31,7 +31,7 @@ import {
   SmartContracts,
 } from "@saturn-chain/smart-contract";
 import { ZeroAccount } from "./constants";
-setSoCashCombinedJson(accContractsJson as any);
+setSoCashCombinedJson(allContracts.combined);
 const Subscriptions: EventReceiver[] = [];
 
 function addSubscription(s: EventReceiver) {

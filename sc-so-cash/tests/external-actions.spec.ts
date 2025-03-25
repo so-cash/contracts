@@ -48,15 +48,25 @@ describe("Test SoCash Bank External Functions", async function () {
       expectedIBAN,
     );
 
-    const [bic, accountNumber, iban, decodedVia1, decodedVia2, codes] =
-      await Promise.all([
-        g.bank1.bic(g.bo1User.call()),
-        g.bank1.accountNumberOf(g.bo1User.call(), g.nostroBank2.deployedAt),
-        g.bank2.ibanOf(g.bo1User.call(), g.nostroBank1.deployedAt),
-        g.bank1.decodeIBAN(g.bo1User.call(), ibanOfNostro1),
-        g.bank2.decodeIBAN(g.bo1User.call(), ibanOfNostro1),
-        g.bank1.codes(g.bo1User.call()),
-      ]);
+    const [
+      bic,
+      accountNumber,
+      iban,
+      decodedVia1,
+      decodedVia2,
+      decodedViaRef,
+      decodedViaRefAsContract,
+      codes,
+    ] = await Promise.all([
+      g.bank1.bic(g.bo1User.call()),
+      g.bank1.accountNumberOf(g.bo1User.call(), g.nostroBank2.deployedAt),
+      g.bank2.ibanOf(g.bo1User.call(), g.nostroBank1.deployedAt),
+      g.bank1.decodeIBAN(g.bo1User.call(), ibanOfNostro1),
+      g.bank2.decodeIBAN(g.bo1User.call(), ibanOfNostro1),
+      g.root.decodeIBAN(g.bo1User.call(), ibanOfNostro1),
+      g.root.decodeIBANToContracts(g.bo1User.call(), ibanOfNostro1),
+      g.bank1.codes(g.bo1User.call()),
+    ]);
     // Attention bic and iban are padded with 0x00 to their fixed size
     console.log(
       bic.replaceAll("\x00", ""),
@@ -68,6 +78,10 @@ describe("Test SoCash Bank External Functions", async function () {
       decodedVia1,
       "\nIBAN decoded via Bank2:",
       decodedVia2,
+      "\nIBAN decoded via Root Ref:",
+      cleanStruct(decodedViaRef),
+      "\nIBAN decoded via Root Ref as contract:",
+      cleanStruct(decodedViaRefAsContract),
       "\nBank code & BranchCode:",
       codes,
       "\nIBAN decoded via PaymentEngine:",
@@ -78,6 +92,9 @@ describe("Test SoCash Bank External Functions", async function () {
     expect(decodedVia1.account).to.equal(g.nostroBank1.deployedAt);
     expect(decodedVia2.bank).to.equal(g.bank2.deployedAt);
     expect(decodedVia2.account).to.equal(g.nostroBank1.deployedAt);
+    expect(decodedViaRefAsContract.valid).to.equal(true);
+    expect(decodedViaRefAsContract.bank).to.equal(g.bank2.deployedAt);
+    expect(decodedViaRefAsContract.account).to.equal(g.nostroBank1.deployedAt);
   });
 
   it("Cannot call directly the operations dedicated to accounts", async () => {

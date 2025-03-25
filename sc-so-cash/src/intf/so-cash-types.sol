@@ -5,28 +5,11 @@ pragma solidity 0.8.17;
 import {BankAccount, BankModel, CodeType} from "@so-cash/sc-so-cash-ref/src/intf/so-cash-referential.sol";
 
 
-/** Just a marker type - to give a type to a contract - it should not have function */
+/** Just a marker type - to give an abstract type to a contract that represents a bank module - it should not have function */
 interface ISoCashBank {}
 
-/** Just a marker type - to give a type to a contract - it should not have function */
+/** Just a marker type - to give an abstract type to a contract that represents a bank account - it should not have function */
 interface ISoCashAccount {}
-
-// TODO: replace with 2 different strucures: One for recording the nostro with other banks and one for the correspondent banks
-// we may have both for the same bank but not necessarily. 
-// For instance, we may have a nostro with central bank money, and use a correspondent bank that also has a nostro with the central bank
-// We may also want to have a nostro as a balance on a stablecoin (ERC20) acting as a central bank money
-
-// CorrespondentBank structure is not necessary as it will be in the referential
-// struct CorrespondentBank {
-//     bool registered;
-//     ISoCashAccount loro; // the account of this bank with us
-//     ISoCashAccount nostro; // our account with this bank
-//     uint256 lastNostroBalance; // the local copy of the balance of nostro account
-// }
-
-
-// TODO: Duplicate of the one in the referential
-// enum BankModel { UNDEFINED, SO_CASH, ERC20 }
 
 // Nostro Account is the structure that point to where the bank has its money either in a so-cash account or in an ERC20 account
 struct NostroAccount {

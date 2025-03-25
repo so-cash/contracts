@@ -15,8 +15,10 @@ import {
 import {CountryStateStorage} from "./CountryStateStorage.sol";
 import {BankControllerInternal} from "./BankControllerInternal.sol";
 
-contract CountryStateManagement is ISoCashCountryStateManagement, BankControllerInternal {
-
+contract CountryStateManagementInternal {
+  function _countryCode() internal view returns (bytes2) {
+    return CountryStateStorage.layout().countryCode;
+  }
 
   function copyCodes(CodeType[] memory codes, uint from, uint to) internal pure returns (CodeType[] memory) {
     if (to == 0) to = codes.length;
@@ -40,8 +42,17 @@ contract CountryStateManagement is ISoCashCountryStateManagement, BankController
     return index;
   }
 
+
+  function _getBankModule(CodeType[] memory codes, bytes3 currency) internal view returns (ISoCashBankExternal) {
+    CountryStateStorage.Layout storage l = CountryStateStorage.layout();
+    return l.bankModules[_index(codes)][currency];
+  }
+}
+
+contract CountryStateManagement is ISoCashCountryStateManagement, CountryStateManagementInternal, BankControllerInternal {
+
   function countryCode() external view returns (bytes2) {
-    return CountryStateStorage.layout().countryCode;
+    return _countryCode();
   }
 
   /** 
@@ -105,8 +116,7 @@ contract CountryStateManagement is ISoCashCountryStateManagement, BankController
   }
 
   function getBankModule(CodeType[] memory codes, bytes3 currency) external view override returns (ISoCashBankExternal) {
-    CountryStateStorage.Layout storage l = CountryStateStorage.layout();
-    return l.bankModules[_index(codes)][currency];
+    return _getBankModule(codes, currency);
   }
 
   function getCorrespondentBanks(CodeType[] memory codes, bytes3 currency) external view override returns (BankIdentifier[] memory correspondents) {

@@ -68,22 +68,24 @@ export const contractsNames = {
   },
   refdiamond: {
     root: {
-      intf: "ISoCashGlobalReferential",
+      intf: "ISoCashGlobalReferentialFull",
       base: "GlobalReferentialDiamond",
       readable: "GlobalReferentialDiamondReadable",
       writable: "GlobalReferentialDiamondWritable",
       // facets
       finder: "PathFinder",
       countryManager: "CountryManager",
+      iban: "Router_IBANServiceFacet",
     },
     country: {
-      intf: "ISoCashCountryReferential",
+      intf: "ISoCashCountryReferentialFull",
       base: "CountryReferentialDiamond",
       readable: "CountryReferentialDiamondReadable",
       writable: "CountryReferentialDiamondWritable",
       // facets
       bankController: "BankController",
       countryState: "CountryStateManagement",
+      iban: "Generic_IBANServiceFacet",
     },
   },
   oppenzeppelin: {
@@ -144,6 +146,7 @@ export async function createRootReferential(
       facetNames: [
         contractsNames.refdiamond.root.finder,
         contractsNames.refdiamond.root.countryManager,
+        contractsNames.refdiamond.root.iban,
       ],
       initializeFunctionName: "initialize",
       initializeFunctionArgs: [],
@@ -171,6 +174,7 @@ export async function createCountryReferential(
         contractsNames.oppenzeppelin.ownable,
         contractsNames.refdiamond.country.bankController,
         contractsNames.refdiamond.country.countryState,
+        contractsNames.refdiamond.country.iban,
       ],
       initializeFunctionName: "initialize",
       initializeFunctionArgs: [Buffer.from(country.slice(0, 2))],

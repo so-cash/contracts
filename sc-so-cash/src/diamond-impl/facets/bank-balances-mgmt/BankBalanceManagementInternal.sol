@@ -18,6 +18,7 @@ import {
   ISoCashBank,
   ISoCashBankBalanceManagementInternal,
   IERC20CompatibilityBaseInternal} from "../../../intf/so-cash-bank.sol";
+import {IOwnable} from "../../../intf/whitelisted-senders.sol";
 import {BankBalanceManagementStorage} from "./BankBalanceManagementStorage.sol";
 import {LocalIBANCalculator} from "../iban/IBANService.sol";
 import {SharedFunctions} from "../../libs/SharedFunctions.sol";
@@ -82,6 +83,9 @@ contract BankBalanceManagementInternal is IERC20CompatibilityBaseInternal, ISoCa
     // delete the record
     delete l._accounts[account];
     emit AccountRegistration(account, false);
+
+    // return the ownership to the caller (ie the back office)
+    IOwnable(address(account)).transferOwnership(msg.sender);
     return true;
   }
 

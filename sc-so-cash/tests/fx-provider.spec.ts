@@ -31,6 +31,7 @@ import {
   contractsNames,
   createAccount,
   createFXProvider,
+  initWeb3Time,
   receipientInfo,
 } from "@so-cash/sc-shared";
 
@@ -41,6 +42,7 @@ import { EthProviderInterface } from "@saturn-chain/dlt-tx-data-functions";
 describe("Test SoCash FX Provider", async function () {
   setMochaTimeout(this, 20_000);
   const web3 = new Web3(ganacheProvider() as any);
+  initWeb3Time(web3);
   let ref: Awaited<ReturnType<typeof declareReferentials>>;
 
   this.beforeEach(async () => {

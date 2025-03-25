@@ -1,6 +1,5 @@
 import Web3 from "web3";
 
-import refCombined from "../build/combined.json" assert { type: "json" };
 import refContracts from "../build";
 import {
   map,
