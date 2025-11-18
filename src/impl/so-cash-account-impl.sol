@@ -94,10 +94,10 @@ contract SoCashAccount is ISoCashAccount, ISoCashOwnedAccount, WhitelistedSender
   }
 
   function transfer(address to, uint256 amount) public override onlyWhitelisted returns (bool) {
-    return _bank().transfer(RecipentInfo(ISoCashAccount(to), BIC.wrap(0), IBAN.wrap(0)), amount, "ERC20 Transfer");
+    return _bank().transfer(RecipientInfo(ISoCashAccount(to), BIC.wrap(0), IBAN.wrap(0)), amount, "ERC20 Transfer");
   }
 
-  function transferEx(RecipentInfo calldata recipient, uint256 amount, string calldata details) public override returns (bool) {
+  function transferEx(RecipientInfo calldata recipient, uint256 amount, string calldata details) public override returns (bool) {
     if (isWhitelisted(_msgSender())) {
       // allowed so transfer directly
       return _bank().transfer(recipient, amount, details);
@@ -112,10 +112,10 @@ contract SoCashAccount is ISoCashAccount, ISoCashOwnedAccount, WhitelistedSender
       address recipient,
       uint256 amount
   ) public override returns (bool) {
-    return _transferUsingAllowance(_msgSender(), RecipentInfo(ISoCashAccount(recipient), BIC.wrap(0), IBAN.wrap(0)), amount, "ERC20 TransferFrom");
+    return _transferUsingAllowance(_msgSender(), RecipientInfo(ISoCashAccount(recipient), BIC.wrap(0), IBAN.wrap(0)), amount, "ERC20 TransferFrom");
   }
 
-  function _transferUsingAllowance(address sender, RecipentInfo memory recipient, uint256 amount, string memory details) internal returns (bool) {
+  function _transferUsingAllowance(address sender, RecipientInfo memory recipient, uint256 amount, string memory details) internal returns (bool) {
     uint256 currentAllowance = _allowances[sender];
     require(
         currentAllowance >= amount,
@@ -128,7 +128,7 @@ contract SoCashAccount is ISoCashAccount, ISoCashOwnedAccount, WhitelistedSender
     return _bank().transfer(recipient, amount, details);
   }
 
-  function lockFunds(RecipentInfo calldata recipient, uint256 amount, 
+  function lockFunds(RecipientInfo calldata recipient, uint256 amount, 
               uint256 deadline, bytes32 hashlockPaid, bytes32 hashlockCancel, 
               string calldata opaque) public onlyWhitelisted returns (bytes32 key) {
     key = saveHTLCPayment(
@@ -143,7 +143,7 @@ contract SoCashAccount is ISoCashAccount, ISoCashOwnedAccount, WhitelistedSender
     require(_bank().lockFunds(amount), "SoC: lockFunds failed");
     return key;
   }
-  function transferLockedFunds(bytes32 key, RecipentInfo calldata recipient, string calldata secret, string calldata details) public returns (bool) {
+  function transferLockedFunds(bytes32 key, RecipientInfo calldata recipient, string calldata secret, string calldata details) public returns (bool) {
     // can be called by anyone with the secret
     HTLC memory htlc = closeHTLCPayment(key, secret);
     require( _bank().unlockFunds(htlc.amount) , "SoC: unlockFunds failed");

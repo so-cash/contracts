@@ -21,7 +21,7 @@ type BIC is bytes11;
 type CCY is bytes3;
 type AccountNumber is uint32;
 
-struct RecipentInfo {
+struct RecipientInfo {
     ISoCashAccount account; // optional if the rest is given
     BIC bic; // optional if the account is given
     IBAN iban; // optional if the account is given
@@ -35,7 +35,7 @@ enum TransferStatus {
 
 struct TransferInfo {
     ISoCashAccount sender;
-    RecipentInfo recipient;
+    RecipientInfo recipient;
     uint256 amount;
     TransferStatus status;
     string details;

@@ -24,12 +24,12 @@ interface ISoCashOwnedAccount is ISoCashAccount, IERC20Metadata {
   function getAttributeNum(bytes32 name) view external returns(int);
   function setAttributeNum(bytes32 name, int value) external;
 
-  function transferEx(RecipentInfo calldata recipient, uint256 amount, string calldata details) external returns (bool);
+  function transferEx(RecipientInfo calldata recipient, uint256 amount, string calldata details) external returns (bool);
 
-  function lockFunds(RecipentInfo calldata recipient, uint256 amount, 
+  function lockFunds(RecipientInfo calldata recipient, uint256 amount, 
               uint256 deadline, bytes32 hashlockPaid, bytes32 hashlockCancel, 
               string calldata opaque) external returns (bytes32 key);
-  function transferLockedFunds(bytes32 key, RecipentInfo calldata recipient, string calldata secret, string calldata details) external returns (bool);
+  function transferLockedFunds(bytes32 key, RecipientInfo calldata recipient, string calldata secret, string calldata details) external returns (bool);
   function unlockFunds(bytes32 key, string calldata secret) external returns (bool);
 }
 

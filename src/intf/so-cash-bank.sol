@@ -20,7 +20,7 @@ interface ISoCashBankExternal is IERC20Compatibility {
 
     function transferInfo(TransferId id) external view returns (TransferInfo memory);
 
-    function transfer(RecipentInfo calldata to, uint256 amount, string calldata details) external returns (bool);
+    function transfer(RecipientInfo calldata to, uint256 amount, string calldata details) external returns (bool);
     function lockFunds(uint256 amount) external returns (bool);
     function unlockFunds(uint256 amount) external returns (bool);
     function lockedBalanceOf(ISoCashAccount account) external view returns (uint256);
@@ -38,7 +38,7 @@ interface ISoCashBankExternal is IERC20Compatibility {
 interface ISoCashInterBank {
     event Adviced(ISoCashBank indexed target, ISoCashAccount indexed account, uint256 amount, OperationDirection direction, TransferId indexed id);
 
-    function interbankTransfer(RecipentInfo calldata to, uint256 amount, TransferId id) external returns (bool);
+    function interbankTransfer(RecipientInfo calldata to, uint256 amount, TransferId id) external returns (bool);
     function interbankNetting(uint256 amount, TransferId id) external returns (bool);
     function advice(uint256 amount, OperationDirection direction, TransferId id) external returns (bool);
 }
@@ -65,7 +65,7 @@ interface ISoCashBankBackOffice {
     function debit(ISoCashAccount account, uint256 amount, string calldata details) external returns (bool);
     function lockFunds(ISoCashAccount account, uint256 amount) external returns (bool);
     function unlockFunds(ISoCashAccount account, uint256 amount) external returns (bool);
-    function transferFrom(ISoCashAccount from, RecipentInfo calldata to, uint256 amount, string calldata details) external returns (bool);
+    function transferFrom(ISoCashAccount from, RecipientInfo calldata to, uint256 amount, string calldata details) external returns (bool);
 
     function creditNostro(ISoCashAccount nostro, uint256 amount, string calldata details) external returns (bool);
     function requestNetting(ISoCashBank correspondent, uint256 amount) external returns (bool);

@@ -69,7 +69,7 @@ contract SoCashBank is ISoCashBank, ISoCashBankBackOffice, ISoCashBankExternal, 
   function transferInfo(TransferId id) public view returns (TransferInfo memory) {
     return _transferDetails[id];
   }
-  function transfer(RecipentInfo calldata to, uint256 amount, string calldata details) public onlyRegisteredAccount returns (bool) {
+  function transfer(RecipientInfo calldata to, uint256 amount, string calldata details) public onlyRegisteredAccount returns (bool) {
     TransferId id = _createTransferInfo(ISoCashAccount(msg.sender), to, amount, details);
     return _transferLogic(ISoCashAccount(msg.sender), to, amount, id);
   }
@@ -195,7 +195,7 @@ contract SoCashBank is ISoCashBank, ISoCashBankBackOffice, ISoCashBankExternal, 
     _;
   }
 
-  function interbankTransfer(RecipentInfo calldata to, uint256 amount, TransferId id) public onlyCorrespondentBank returns (bool) {
+  function interbankTransfer(RecipientInfo calldata to, uint256 amount, TransferId id) public onlyCorrespondentBank returns (bool) {
     CorrespondentBank storage cb = _correspondents[ISoCashBank(msg.sender)];
     ISoCashBankExternal srcBank = ISoCashBankExternal(msg.sender);
     // create a transfer info from a copy of the recipient info
@@ -215,7 +215,7 @@ contract SoCashBank is ISoCashBank, ISoCashBankBackOffice, ISoCashBankExternal, 
     // This is a specific case where we need to invert the sender and recipient
     TransferId localId = _createTransferInfo(
       cb.loro, 
-      RecipentInfo(cb.nostro, BIC.wrap(0), IBAN.wrap(0)), 
+      RecipientInfo(cb.nostro, BIC.wrap(0), IBAN.wrap(0)), 
       amount, "Netting request");
 
     // check that our nostro has been debited
@@ -340,7 +340,7 @@ contract SoCashBank is ISoCashBank, ISoCashBankBackOffice, ISoCashBankExternal, 
   function credit(ISoCashAccount account, uint256 amount, string calldata details) public onlyWhitelisted returns (bool) {
     TransferId id = _createTransferInfo(
       ZERO_ACCOUNT, 
-      RecipentInfo(account, BIC.wrap(0), IBAN.wrap(0)), 
+      RecipientInfo(account, BIC.wrap(0), IBAN.wrap(0)), 
       amount, details);
     bool success = _mint(account, amount, id);
     _adviceIfNeeded(account, amount, OperationDirection.CREDIT, id);
@@ -351,7 +351,7 @@ contract SoCashBank is ISoCashBank, ISoCashBankBackOffice, ISoCashBankExternal, 
   function debit(ISoCashAccount account, uint256 amount, string calldata details) public onlyWhitelisted returns (bool) {
     TransferId id = _createTransferInfo(
       account, 
-      RecipentInfo(ZERO_ACCOUNT, BIC.wrap(0), IBAN.wrap(0)), 
+      RecipientInfo(ZERO_ACCOUNT, BIC.wrap(0), IBAN.wrap(0)), 
       amount, details);
     bool success = _burn(account, amount, id);
     _adviceIfNeeded(account, amount, OperationDirection.DEBIT, id);
@@ -365,7 +365,7 @@ contract SoCashBank is ISoCashBank, ISoCashBankBackOffice, ISoCashBankExternal, 
     return _unlock(account, amount);
   }
 
-  function transferFrom(ISoCashAccount from, RecipentInfo calldata to, uint256 amount, string calldata details) public onlyWhitelisted returns (bool) {
+  function transferFrom(ISoCashAccount from, RecipientInfo calldata to, uint256 amount, string calldata details) public onlyWhitelisted returns (bool) {
     TransferId id = _createTransferInfo(from, to, amount, details);
     return _transferLogic(from, to, amount, id);
   }
@@ -378,7 +378,7 @@ contract SoCashBank is ISoCashBank, ISoCashBankBackOffice, ISoCashBankExternal, 
     CorrespondentBank storage cb = _correspondents[cBank];
     require(cb.nostro == nostro, "SoC: The account is not your nostro at the correspondent bank");
     require(notNullAccount(cb.loro), "SoC: The correspondent bank has no loro account with you");
-    RecipentInfo memory recipient = RecipentInfo(nostro, BIC.wrap(0), IBAN.wrap(0));
+    RecipientInfo memory recipient = RecipientInfo(nostro, BIC.wrap(0), IBAN.wrap(0));
     TransferId id = _createTransferInfo(
       ZERO_ACCOUNT, 
       recipient, 
@@ -399,7 +399,7 @@ contract SoCashBank is ISoCashBank, ISoCashBankBackOffice, ISoCashBankExternal, 
     require(_accounts[cb.loro].balance >= amount, "SoC: Insufficient funds for netting");
     TransferId id = _createTransferInfo(
       cb.loro, 
-      RecipentInfo(cb.nostro, BIC.wrap(0), IBAN.wrap(0)), 
+      RecipientInfo(cb.nostro, BIC.wrap(0), IBAN.wrap(0)), 
       amount, "Netting request");
     // debit their account on our end
     bool success = _burn(cb.loro, amount, id);
@@ -468,14 +468,14 @@ contract SoCashBank is ISoCashBank, ISoCashBankBackOffice, ISoCashBankExternal, 
   }
 
   //#region INTERNAL FUNCTIONS
-  function _transferLogic(ISoCashAccount sender, RecipentInfo memory to, uint256 amount, TransferId id) internal returns (bool) {
+  function _transferLogic(ISoCashAccount sender, RecipientInfo memory to, uint256 amount, TransferId id) internal returns (bool) {
     require(notNullAccount(sender), "SoC: Cannot transfer from a null account");
     // TODO
     // Identify the recipient as part of this bank or outside
     // Then decide if the operation should be put in pending or executed immediately
     // Then execute the action
     if (notNullAccount(to.account)) {
-      // if sender and recipents are the same no operation to do
+      // if sender and recipients are the same no operation to do
       if (sender == to.account) return true;
       require(sameCurrencyAndDecimals(_ioa(to.account), IERC20Metadata(address(this))), "SoC: Expect the recipient to have the same currency and decimals as the bank");
       // get the bank of the recipient
@@ -539,7 +539,7 @@ contract SoCashBank is ISoCashBank, ISoCashBankBackOffice, ISoCashBankExternal, 
     return false; // just in case
   }
 
-  function _interbankTransferLogic(ISoCashBank senderBank, RecipentInfo memory to, uint256 amount, TransferId id) internal returns (bool) {
+  function _interbankTransferLogic(ISoCashBank senderBank, RecipientInfo memory to, uint256 amount, TransferId id) internal returns (bool) {
     require(notNullBank(senderBank), "SoC: Cannot transfer from a null bank");
     // check what to do with the beneficiary
     if (notNullAccount(to.account)) {
@@ -559,7 +559,7 @@ contract SoCashBank is ISoCashBank, ISoCashBankBackOffice, ISoCashBankExternal, 
     return false; // just in case
   }
 
-  function _createTransferInfo(ISoCashAccount from, RecipentInfo memory to, uint256 amount, string memory details) internal returns (TransferId) {
+  function _createTransferInfo(ISoCashAccount from, RecipientInfo memory to, uint256 amount, string memory details) internal returns (TransferId) {
     TransferId id = TransferId.wrap(_transferIdCounter++);
     _transferDetails[id] = TransferInfo(from, to, amount, TransferStatus.NEW, details, "");
     return id;

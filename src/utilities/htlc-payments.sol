@@ -10,7 +10,7 @@ contract HTLCPaymentCapacity is IHTLCPayment{
     mapping(bytes32 => HTLC) private _payments; // the HTLCs
 
     function saveHTLCPayment(
-        RecipentInfo memory recipient,
+        RecipientInfo memory recipient,
         uint256 amount,
         uint256 deadline,
         bytes32 hashlockPaid,

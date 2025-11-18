@@ -13,7 +13,7 @@ interface IHTLCPayment {
     }
 
     struct HTLC {
-      RecipentInfo recipient; // the expected beneficiary of the locked funds
+      RecipientInfo recipient; // the expected beneficiary of the locked funds
       uint256 amount; // the amount to be repaid
       uint256 deadline; // the deadline to repay the debt in seconds
       bytes32 hashlockPaid; // the hashlock being the sha256 of the release secret
